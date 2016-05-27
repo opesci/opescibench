@@ -14,6 +14,9 @@ class Benchmark(object):
         self._params = []
         self._values = {}
 
+        self.timings = {}
+        self.meta = {}
+
     def add_parameter(self, name, *parserargs, **parserkwargs):
         self._params += [name.lstrip('-')]
         self.parser.add_parameter(name, *parserargs, **parserkwargs)
@@ -42,3 +45,16 @@ class Benchmark(object):
     def sweep(self):
         """ List of value mappings for each instance of a parameter sweep. """
         return [OrderedDict(zip(self.params, v)) for v in product(*self.values.values())]
+
+    def execute(self, executor, warmups=1, repeats=3):
+        """
+        Main execution function that invokes the given executor
+        for each combination of the parameter sweep.
+        """
+        for params in self.sweep:
+            # Execute the benchmark
+            executor.execute(warmups=warmups, repeats=repeats, **params)
+
+            # Store timing and meta data under the parameter key
+            self.timings[tuple(params.items())] = executor.timings
+            self.meta[tuple(params.items())] = executor.meta
