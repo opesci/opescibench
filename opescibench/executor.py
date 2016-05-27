@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 __all__ = ['Executor']
 
 
@@ -6,7 +8,7 @@ class Executor(object):
 
     def __init__(self):
         self.meta = {}
-        self.timings = {}
+        self.timings = defaultdict(lambda: defaultdict(float))
 
     def setup(self, **kwargs):
         """ Prepares a single benchmark invocation. """
@@ -24,9 +26,16 @@ class Executor(object):
         """ This methods needs to be overridden byt the user. """
         raise NotImplementedError("No custom executor function specified")
 
-    def register_timing(self, key, timing):
-        """ Register a single timing value for a gicng key. """
-        self.timings[key] += timing
+    def register(self, event, measure, value):
+        """
+        Register a single timing value for a given event key.
+
+        :param event: key for the measured event, ie. 'assembly' or 'solve'
+        :param measure: name of the value type, eg. 'time' or 'flops'
+        :param value: measured value to store
+
+        """
+        self.timings[event][measure] += value
 
     def execute(self, warmups=1, repeats=3, **params):
         """
@@ -44,8 +53,9 @@ class Executor(object):
             self.teardown(**params)
 
             # Average timings across repeats
-            for k, t in self.timings.items():
-                self.timings[k] /= repeats
+            for event in self.timings.keys():
+                for measure in self.timings[event].keys():
+                    self.timings[event][measure] /= repeats
 
         # Collect meta-information via post-processing methods
         self.postprocess(**params)
