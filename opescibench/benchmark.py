@@ -1,6 +1,9 @@
 from opescibench.argparser import ArgParser
 from collections import OrderedDict
 from itertools import product
+from datetime import datetime
+from os import path
+import json
 
 __all__ = ['Benchmark']
 
@@ -9,6 +12,7 @@ class Benchmark(object):
     """ Class encapsulating a set of benchmark runs. """
 
     def __init__(self, name, **kwargs):
+        self.name = name
         self.parser = ArgParser(**kwargs)
 
         self._params = []
@@ -46,6 +50,10 @@ class Benchmark(object):
         """ List of value mappings for each instance of a parameter sweep. """
         return [OrderedDict(zip(self.params, v)) for v in product(*self.values.values())]
 
+    def param_key(self, params):
+        """ Convert parameter tuple to string """
+        return '_'.join(['%s%s' % p for p in params])
+
     def execute(self, executor, warmups=1, repeats=3):
         """
         Main execution function that invokes the given executor
@@ -58,3 +66,18 @@ class Benchmark(object):
             # Store timing and meta data under the parameter key
             self.timings[tuple(params.items())] = executor.timings
             self.meta[tuple(params.items())] = executor.meta
+
+    def save(self):
+        """ Save all timing results in individually keyed files. """
+        resultsdir = self.parser.args.resultsdir
+        timestamp = datetime.now().strftime('%Y-%m-%dT%H%M%S')
+
+        for key in self.timings.keys():
+            outdict = OrderedDict()
+            outdict['timestamp'] = timestamp
+            outdict['meta'] = self.meta[key]
+            outdict['timings'] = self.timings[key]
+
+            filename = '%s_%s.json' % (self.name, self.param_key(key))
+            with open(path.join(resultsdir, filename), 'w') as f:
+                json.dump(outdict, f, indent=4)
