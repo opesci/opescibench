@@ -81,3 +81,14 @@ class Benchmark(object):
             filename = '%s_%s.json' % (self.name, self.param_key(key))
             with open(path.join(resultsdir, filename), 'w') as f:
                 json.dump(outdict, f, indent=4)
+
+    def load(self):
+        """ Load timing results from individually keyed files. """
+        resultsdir = self.parser.args.resultsdir
+        for params in self.sweep:
+            filename = '%s_%s.json' % (self.name, self.param_key(params.items()))
+            try:
+                with open(path.join(resultsdir, filename), 'r') as f:
+                    self.timings[tuple(params.items())] = json.loads(f.read())
+            except:
+                print "WARNING: Could not load file: %s" % filename
