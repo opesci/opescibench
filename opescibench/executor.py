@@ -26,14 +26,13 @@ class Executor(object):
         """ This methods needs to be overridden byt the user. """
         raise NotImplementedError("No custom executor function specified")
 
-    def register(self, event, measure, value):
+    def register(self, event, value, measure='time'):
         """
         Register a single timing value for a given event key.
 
         :param event: key for the measured event, ie. 'assembly' or 'solve'
-        :param measure: name of the value type, eg. 'time' or 'flops'
         :param value: measured value to store
-
+        :param measure: name of the value type, eg. 'time' or 'flops'
         """
         self.timings[event][measure] += value
 
