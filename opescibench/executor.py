@@ -6,10 +6,6 @@ __all__ = ['Executor']
 class Executor(object):
     """ Abstract container class for a single benchmark data point. """
 
-    def __init__(self):
-        self.meta = {}
-        self.timings = defaultdict(lambda: defaultdict(float))
-
     def setup(self, **kwargs):
         """ Prepares a single benchmark invocation. """
         pass
@@ -41,6 +37,10 @@ class Executor(object):
         Execute a single benchmark repeatedly, including
         setup, teardown and postprocessing methods.
         """
+        # Reset the data dicts
+        self.meta = {}
+        self.timings = defaultdict(lambda: defaultdict(float))
+
         for _ in range(warmups):
             self.setup(**params)
             self.run(**params)
@@ -51,10 +51,10 @@ class Executor(object):
             self.run(**params)
             self.teardown(**params)
 
-            # Average timings across repeats
-            for event in self.timings.keys():
-                for measure in self.timings[event].keys():
-                    self.timings[event][measure] /= repeats
+        # Average timings across repeats
+        for event in self.timings.keys():
+            for measure in self.timings[event].keys():
+                self.timings[event][measure] /= repeats
 
         # Collect meta-information via post-processing methods
         self.postprocess(**params)
