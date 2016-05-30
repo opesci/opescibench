@@ -18,12 +18,16 @@ class Plotter(object):
         self.bench = benchmark
 
         self.parser = parser
-        self.parser.add_argument('--plottype', choices=('error', 'comparison'), default='error',
-                                 help='Type of plot to generate: error-cost or barchart comparison')
+        self.parser.add_argument('--plottype', choices=('error', 'roofline'), default='error',
+                                 help='Type of plot to generate: error-cost or roofline')
         self.parser.add_argument('-i', '--resultsdir', default='results',
                                  help='Directory containing results')
         self.parser.add_argument('-o', '--plotdir', default='plots',
                                  help='Directory to store generated plots')
+        self.parser.add_argument('--max-bw', metavar='max_bw', type=float,
+                                 help='Maximum memory bandwidth for roofline plots')
+        self.parser.add_argument('--max-flops', metavar='max_flops', type=float,
+                                 help='Maximum flop rate for roofline plots')
 
     def plot_error_cost(self, figname, error, time, save=True):
         """ Plot an error cost diagram for the given error and time data.
@@ -61,6 +65,64 @@ class Plotter(object):
         if save:
             figpath = path.join(self.bench.args.plotdir, figname)
             print "Plotting error-cost plot: %s " % figpath
+            fig.savefig(figpath, format='pdf', facecolor='white',
+                        orientation='landscape', bbox_inches='tight')
+        else:
+            return fig, ax
+
+    def plot_roofline(self, figname, flopss, intensity, max_bw=None, max_flops=None, save=True):
+        """ Plot performance on a roofline graph with given limits.
+
+        :param figname: Name of output file
+        :param flopss: Dict of labels to flop rates (MFlops/s)
+        :param intensity: Dict of labels to operational intensity values (Flops/B)
+        :param max_bw: Maximum achievable memory bandwidth; determines roofline slope
+        :param max_flops: Maximum achievable flop rate; determines roof of the diagram
+        :param save: Whether to save the plot; if False a tuple (fig, axis) is returned
+        """
+        assert(isinstance(flopss, Mapping) and isinstance(intensity, Mapping))
+        fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
+        ax = fig.add_subplot(111)
+
+        max_bw = max_bw or self.bench.args.max_bw
+        max_flops = max_flops or self.bench.args.max_flops
+        assert(max_bw is not None and max_flops is not None)
+
+        # Derive axis values for flops rate and operational intensity
+        xmin = floor(log(min(intensity.values()), 2.))
+        xmax = ceil(log(max(intensity.values()), 2.))
+        xvals = 2 ** np.linspace(xmin, xmax, xmax - xmin + 1)
+        ymin = floor(log(min(flopss.values()), 10.))
+        ymay = ceil(log(max(flopss.values()), 10.))
+        yvals = 10. ** np.linspace(ymin, ymay, ymay - ymin + 1)
+        # Derive roofline and insert the explicit crossover point
+        roofline = xvals * max_bw
+        roofline[roofline > max_flops] = max_flops
+        idx = (roofline >= max_flops).argmax()
+        x_roofl = np.insert(xvals, idx, max_flops / max_bw)
+        roofline = np.insert(roofline, idx, max_flops)
+        ax.loglog(x_roofl, roofline, 'k-')
+
+        # Insert roofline points
+        for label in flopss.keys():
+            oi = intensity[label]
+            ax.loglog(oi, flopss[label], 'k%s' % self.marker[0])
+            ax.plot([oi, oi], [ymin, min(oi * max_bw, max_flops)], 'k:')
+            plt.annotate(label, xy=(oi, flopss[label]), xytext=(3, -20),
+                         rotation=-90, textcoords='offset points', size=10)
+
+        # Enforce axis limits, set values and labels
+        ax.set_ylim(yvals[0], yvals[-1])
+        ax.set_yticks(yvals)
+        ax.set_yticklabels(yvals / 1000)
+        ax.set_ylabel('Performance (GFlops/s)')
+        ax.set_xlim(xvals[0], xvals[-1])
+        ax.set_xticks(xvals)
+        ax.set_xticklabels(xvals)
+        ax.set_xlabel('Operational intensity (Flops/Byte)')
+        if save:
+            figpath = path.join(self.bench.args.plotdir, figname)
+            print "Plotting roofline: %s " % figpath
             fig.savefig(figpath, format='pdf', facecolor='white',
                         orientation='landscape', bbox_inches='tight')
         else:
