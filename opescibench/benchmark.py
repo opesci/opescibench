@@ -6,6 +6,13 @@ from datetime import datetime
 from os import path
 import json
 
+try:
+    from mpi4py import MPI
+    rank = MPI.COMM_WORLD.rank
+except ImportError:
+    # Assume serial
+    rank = 0
+
 __all__ = ['Benchmark']
 
 
@@ -116,6 +123,8 @@ class Benchmark(object):
 
     def save(self):
         """ Save all timing results in individually keyed files. """
+        if rank > 0:
+            return
         resultsdir = self.args.resultsdir
         timestamp = datetime.now().strftime('%Y-%m-%dT%H%M%S')
 
