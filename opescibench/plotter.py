@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from math import log, floor, ceil
-from os import path
+from os import path, makedirs
 from collections import Mapping
 
 __all__ = ['Plotter']
@@ -28,6 +28,15 @@ class Plotter(object):
                                  help='Maximum memory bandwidth for roofline plots')
         self.parser.add_argument('--max-flops', metavar='max_flops', type=float,
                                  help='Maximum flop rate for roofline plots')
+
+    def save_figure(self, figure, figname):
+        plotdir = self.bench.args.plotdir
+        if not path.exists(plotdir):
+            makedirs(plotdir)
+        figpath = path.join(plotdir, figname)
+        print "Plotting %s " % figpath
+        figure.savefig(figpath, format='pdf', facecolor='white',
+                       orientation='landscape', bbox_inches='tight')
 
     def plot_error_cost(self, figname, error, time, save=True):
         """ Plot an error cost diagram for the given error and time data.
@@ -63,10 +72,7 @@ class Plotter(object):
         ax.set_ylabel('Wall time (s)')
         ax.set_xlabel('Error in L2 norm')
         if save:
-            figpath = path.join(self.bench.args.plotdir, figname)
-            print "Plotting error-cost plot: %s " % figpath
-            fig.savefig(figpath, format='pdf', facecolor='white',
-                        orientation='landscape', bbox_inches='tight')
+            self.save_figure(fig, figname)
         else:
             return fig, ax
 
@@ -121,9 +127,6 @@ class Plotter(object):
         ax.set_xticklabels(xvals)
         ax.set_xlabel('Operational intensity (Flops/Byte)')
         if save:
-            figpath = path.join(self.bench.args.plotdir, figname)
-            print "Plotting roofline: %s " % figpath
-            fig.savefig(figpath, format='pdf', facecolor='white',
-                        orientation='landscape', bbox_inches='tight')
+            self.save_figure(fig, figname)
         else:
             return fig, ax

@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from collections import OrderedDict
 from itertools import product
 from datetime import datetime
-from os import path
+from os import path, makedirs
 import json
 from numpy import array
 
@@ -133,6 +133,8 @@ class Benchmark(object):
         if rank > 0:
             return
         resultsdir = self.args.resultsdir
+        if not path.exists(resultsdir):
+            makedirs(resultsdir)
         timestamp = datetime.now().strftime('%Y-%m-%dT%H%M%S')
 
         for key in self.timings.keys():
