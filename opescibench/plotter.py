@@ -18,7 +18,8 @@ class Plotter(object):
         self.bench = benchmark
 
         self.parser = parser
-        self.parser.add_argument('--plottype', choices=('error', 'roofline'), default='error',
+        self.parser.add_argument('--plottype', default='error',
+                                 choices=('error', 'strong', 'roofline'),
                                  help='Type of plot to generate: error-cost or roofline')
         self.parser.add_argument('-i', '--resultsdir', default='results',
                                  help='Directory containing results')
@@ -37,6 +38,42 @@ class Plotter(object):
         print "Plotting %s " % figpath
         figure.savefig(figpath, format='pdf', facecolor='white',
                        orientation='landscape', bbox_inches='tight')
+
+    def plot_strong_scaling(self, figname, nprocs, time, save=True):
+        """ Plot a strong scaling diagram and according parallel efficiency.
+
+        :param nprocs: List of processor counts or a dict mapping labels to processors
+        :param time: List of timings or a dict mapping labels to timings
+        """
+        assert(isinstance(nprocs, Mapping) == isinstance(time, Mapping))
+        fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
+        ax = fig.add_subplot(111)
+
+        if isinstance(nprocs, Mapping):
+            for i, label in enumerate(nprocs.keys()):
+                ax.loglog(nprocs[label], time[label], label=label,
+                          linewidth=2, linestyle='solid', marker=self.marker[i])
+            ymin = floor(log(min([min(t) for t in time.values() if len(t) > 0]), 2.))
+            ymax = ceil(log(max([max(t) for t in time.values() if len(t) > 0]), 2.))
+        else:
+            ax.loglog(nprocs, time, linewidth=2, linestyle='solid', marker=self.marker[0])
+            ymin = floor(log(min(time), 2.))
+            ymax = ceil(log(max(time), 2.))
+
+        # Add legend if labels were used
+        if isinstance(nprocs, Mapping):
+            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
+        # Enforce power-of-2 log scale for time
+        yvals = 2.0 ** np.linspace(ymin, ymax, ymax-ymin+1)
+        ax.set_ylim(yvals[0], yvals[-1])
+        ax.set_yticks(yvals)
+        ax.set_yticklabels(yvals)
+        ax.set_ylabel('Wall time (s)')
+        ax.set_xlim(nprocs[0], nprocs[-1])
+        ax.set_xticks(nprocs)
+        ax.set_xticklabels(nprocs)
+        ax.set_xlabel('Number of processors')
+        return self.save_figure(fig, figname) if save else fig, ax
 
     def plot_error_cost(self, figname, error, time, annotations=None, save=True):
         """ Plot an error cost diagram for the given error and time data.
