@@ -5,6 +5,7 @@ from itertools import product
 from datetime import datetime
 from os import path
 import json
+from numpy import array
 
 try:
     from mpi4py import MPI
@@ -112,7 +113,7 @@ class Benchmark(object):
                     result += [datadict[key][measure]]
                 else:
                     result += [datadict[key][event][measure]]
-        return result
+        return array(result)
 
     def execute(self, executor, warmups=1, repeats=3):
         """
