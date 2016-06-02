@@ -38,13 +38,14 @@ class Plotter(object):
         figure.savefig(figpath, format='pdf', facecolor='white',
                        orientation='landscape', bbox_inches='tight')
 
-    def plot_error_cost(self, figname, error, time, save=True):
+    def plot_error_cost(self, figname, error, time, annotations=None, save=True):
         """ Plot an error cost diagram for the given error and time data.
 
         :param figname: Name of output file
         :param error: List of error values or a dict mapping labels to values lists
         :param time: List of time measurements or a dict mapping labels to values lists
         :param save: Whether to save the plot; if False a tuple (fig, axis) is returned
+        :param annotations: Optional list of point annotations
         """
         assert(isinstance(error, Mapping) == isinstance(time, Mapping))
         fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
@@ -56,6 +57,11 @@ class Plotter(object):
                           linewidth=2, linestyle='solid', marker=self.marker[i])
             ymin = floor(log(min([min(t) for t in time.values() if len(t) > 0]), 2.))
             ymax = ceil(log(max([max(t) for t in time.values() if len(t) > 0]), 2.))
+            if annotations is not None:
+                for label in annotations:
+                    for x, y, a in zip(error[label], time[label], annotations[label]):
+                        plt.annotate(a, xy=(x, y), xytext=(4, 2),
+                                     textcoords='offset points', size=8)
         else:
             ax.loglog(error, time, linewidth=2, linestyle='solid', marker=self.marker[0])
             ymin = floor(log(min(time), 2.))
