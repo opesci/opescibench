@@ -75,6 +75,33 @@ class Plotter(object):
         ax.set_xlabel('Number of processors')
         return self.save_figure(fig, figname) if save else fig, ax
 
+    def plot_parallel_efficiency(self, figname, nprocs, time, save=True):
+        assert(isinstance(nprocs, Mapping) == isinstance(time, Mapping))
+        fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
+        ax = fig.add_subplot(111)
+
+        if isinstance(nprocs, Mapping):
+            for i, label in enumerate(nprocs.keys()):
+                ax.loglog(nprocs[label], time[label] / time[label][0], label=label,
+                          linewidth=2, linestyle='solid', marker=self.marker[i])
+        else:
+            ax.semilogx(nprocs, (time[0] /time) / nprocs, linewidth=2,
+                        linestyle='solid', marker=self.marker[0])
+
+        # Add legend if labels were used
+        if isinstance(nprocs, Mapping):
+            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
+        yvals = np.linspace(0., 1.2, 7)
+        ax.set_ylim(yvals[0], yvals[-1])
+        ax.set_yticks(yvals)
+        ax.set_yticklabels(yvals)
+        ax.set_ylabel('Speedup')
+        ax.set_xlim(nprocs[0], nprocs[-1])
+        ax.set_xticks(nprocs)
+        ax.set_xticklabels(nprocs)
+        ax.set_xlabel('Number of processors')
+        return self.save_figure(fig, figname) if save else fig, ax
+
     def plot_error_cost(self, figname, error, time, annotations=None, save=True):
         """ Plot an error cost diagram for the given error and time data.
 
