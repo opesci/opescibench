@@ -37,6 +37,11 @@ class Plotter(object):
         self.parser.add_argument('--max-flops', metavar='max_flops', type=float,
                                  help='Maximum flop rate for roofline plots')
 
+    def create_figure(self, figname):
+        fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
+        ax = fig.add_subplot(111)
+        return fig, ax
+
     def set_xaxis(self, axis, label, minval=None, maxval=None,
                   logbase=2., dtype=np.int32):
         if minval and maxval:
@@ -72,8 +77,7 @@ class Plotter(object):
         :param time: List of timings or a dict mapping labels to timings
         """
         assert(isinstance(nprocs, Mapping) == isinstance(time, Mapping))
-        fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
-        ax = fig.add_subplot(111)
+        fig, ax = self.create_figure(figname)
 
         if isinstance(nprocs, Mapping):
             for i, label in enumerate(nprocs.keys()):
@@ -99,8 +103,7 @@ class Plotter(object):
 
     def plot_parallel_efficiency(self, figname, nprocs, time, save=True):
         assert(isinstance(nprocs, Mapping) == isinstance(time, Mapping))
-        fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
-        ax = fig.add_subplot(111)
+        fig, ax = self.create_figure(figname)
 
         if isinstance(nprocs, Mapping):
             for i, label in enumerate(nprocs.keys()):
@@ -135,8 +138,7 @@ class Plotter(object):
         :param save: Whether to save the plot; if False a tuple (fig, axis) is returned
         """
         assert(isinstance(error, Mapping) == isinstance(time, Mapping))
-        fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
-        ax = fig.add_subplot(111)
+        fig, ax = self.create_figure(figname)
 
         if isinstance(error, Mapping):
             for i, label in enumerate(error.keys()):
@@ -171,8 +173,7 @@ class Plotter(object):
         :param save: Whether to save the plot; if False a tuple (fig, axis) is returned
         """
         assert(isinstance(flopss, Mapping) and isinstance(intensity, Mapping))
-        fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
-        ax = fig.add_subplot(111)
+        fig, ax = self.create_figure(figname)
 
         max_bw = max_bw or self.bench.args.max_bw
         max_flops = max_flops or self.bench.args.max_flops
@@ -210,7 +211,4 @@ class Plotter(object):
         ax.set_xticks(xvals)
         ax.set_xticklabels(xvals)
         ax.set_xlabel('Operational intensity (Flops/Byte)')
-        if save:
-            self.save_figure(fig, figname)
-        else:
-            return fig, ax
+        return self.save_figure(fig, figname) if save else fig, ax
