@@ -7,11 +7,21 @@ from collections import Mapping
 __all__ = ['Plotter']
 
 
-def _logscale_limits(minval, maxval, logbase, dtype):
-    """ Compute log-scale values from min and max values """
-    vmin = floor(log(minval, logbase))
-    vmax = ceil(log(maxval, logbase))
-    return dtype(logbase) ** np.linspace(vmin, vmax, vmax - vmin + 1, dtype=dtype)
+def scale_limits(minval, maxval, base, type='log'):
+    """ Compute axis values from min and max values """
+    if type == 'log':
+        basemin = floor(log(minval, base))
+        basemax = ceil(log(maxval, base))
+    else:
+        basemin = floor(float(minval) / base)
+        basemax = ceil(float(maxval) / base)
+    nvals = basemax - basemin + 1
+    dtype = np.int32 if abs(minval) > 1. else np.float32
+    basevals = np.linspace(basemin, basemax, nvals, dtype=dtype)
+    if type == 'log':
+        return dtype(base) ** basevals
+    else:
+        return dtype(base) * basevals
 
 
 class Plotter(object):
@@ -42,22 +52,18 @@ class Plotter(object):
         ax = fig.add_subplot(111)
         return fig, ax
 
-    def set_xaxis(self, axis, label, minval=None, maxval=None,
-                  logbase=2., dtype=np.int32):
-        if minval and maxval:
-            xvals = _logscale_limits(minval, maxval, logbase, dtype)
-            axis.set_xlim(xvals[0], xvals[-1])
-            axis.set_xticks(xvals)
-            axis.set_xticklabels(xvals)
+    def set_xaxis(self, axis, label, values=None):
+        if values is not None:
+            axis.set_xlim(values[0], values[-1])
+            axis.set_xticks(values)
+            axis.set_xticklabels(values)
         axis.set_xlabel(label)
 
-    def set_yaxis(self, axis, label, minval=None, maxval=None,
-                  logbase=2., dtype=np.int32):
-        if minval and maxval:
-            yvals = _logscale_limits(minval, maxval, logbase, dtype)
-            axis.set_ylim(yvals[0], yvals[-1])
-            axis.set_yticks(yvals)
-            axis.set_yticklabels(yvals)
+    def set_yaxis(self, axis, label, values=None):
+        if values is not None:
+            axis.set_ylim(values[0], values[-1])
+            axis.set_yticks(values)
+            axis.set_yticklabels(values)
         axis.set_ylabel(label)
 
     def save_figure(self, figure, figname):
@@ -70,7 +76,7 @@ class Plotter(object):
                        orientation='landscape', bbox_inches='tight')
 
     def plot_strong_scaling(self, figname, nprocs, time, save=True,
-                            ylabel='Wall time (s)'):
+                            xlabel='Number of processors', ylabel='Wall time (s)'):
         """ Plot a strong scaling diagram and according parallel efficiency.
 
         :param nprocs: List of processor counts or a dict mapping labels to processors
@@ -93,15 +99,12 @@ class Plotter(object):
         # Add legend if labels were used
         if isinstance(nprocs, Mapping):
             ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
-        # Enforce power-of-2 log scale for time
-        ax.set_xlim(nprocs[0], nprocs[-1])
-        ax.set_xticks(nprocs)
-        ax.set_xticklabels(nprocs)
-        ax.set_xlabel('Number of processors')
-        self.set_yaxis(ax, ylabel, ymin, ymax, logbase=2.)
+        self.set_xaxis(ax, xlabel, values=nprocs)
+        self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
         return self.save_figure(fig, figname) if save else fig, ax
 
-    def plot_parallel_efficiency(self, figname, nprocs, time, save=True):
+    def plot_efficiency(self, figname, nprocs, time, save=True,
+                        xlabel='Number of processors', ylabel='Parallel efficiency'):
         assert(isinstance(nprocs, Mapping) == isinstance(time, Mapping))
         fig, ax = self.create_figure(figname)
 
@@ -116,15 +119,10 @@ class Plotter(object):
         # Add legend if labels were used
         if isinstance(nprocs, Mapping):
             ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
+        self.set_xaxis(ax, xlabel, values=nprocs)
         yvals = np.linspace(0., 1.2, 7)
-        ax.set_ylim(yvals[0], yvals[-1])
-        ax.set_yticks(yvals)
-        ax.set_yticklabels(yvals)
-        ax.set_ylabel('Speedup')
-        ax.set_xlim(nprocs[0], nprocs[-1])
-        ax.set_xticks(nprocs)
-        ax.set_xticklabels(nprocs)
-        ax.set_xlabel('Number of processors')
+        self.set_xaxis(ax, xlabel, values=nprocs)
+        self.set_yaxis(ax, ylabel, values=yvals)
         return self.save_figure(fig, figname) if save else fig, ax
 
     def plot_error_cost(self, figname, error, time, annotations=None, save=True,
@@ -159,10 +157,12 @@ class Plotter(object):
         if isinstance(error, Mapping):
             ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
         self.set_xaxis(ax, xlabel)
-        self.set_yaxis(ax, ylabel, ymin, ymax, logbase=2.)
+        self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
         return self.save_figure(fig, figname) if save else fig, ax
 
-    def plot_roofline(self, figname, flopss, intensity, max_bw=None, max_flops=None, save=True):
+    def plot_roofline(self, figname, flopss, intensity, max_bw=None, max_flops=None,
+                      save=True, xlabel='Operational intensity (Flops/Byte)',
+                      ylabel='Performance (GFlops/s)'):
         """ Plot performance on a roofline graph with given limits.
 
         :param figname: Name of output file
@@ -180,13 +180,12 @@ class Plotter(object):
         assert(max_bw is not None and max_flops is not None)
 
         # Derive axis values for flops rate and operational intensity
-        xmin = floor(log(min(intensity.values()), 2.))
-        xmax = ceil(log(max(intensity.values()), 2.))
-        xvals = 2 ** np.linspace(xmin, xmax, xmax - xmin + 1)
-        ymin = floor(log(min(flopss.values()), 10.))
-        ymay = ceil(log(max(flopss.values()), 10.))
-        yvals = 10. ** np.linspace(ymin, ymay, ymay - ymin + 1)
-        # Derive roofline and insert the explicit crossover point
+        xvals = scale_limits(min(intensity.values()),
+                              max(intensity.values()),
+                              base=2., type='log')
+        yvals = scale_limits(min(flopss.values()),
+                              max(flopss.values()),
+                              base=10., type='log')
         roofline = xvals * max_bw
         roofline[roofline > max_flops] = max_flops
         idx = (roofline >= max_flops).argmax()
@@ -198,17 +197,11 @@ class Plotter(object):
         for label in flopss.keys():
             oi = intensity[label]
             ax.loglog(oi, flopss[label], 'k%s' % self.marker[0])
-            ax.plot([oi, oi], [ymin, min(oi * max_bw, max_flops)], 'k:')
+            ax.plot([oi, oi], [yvals[0], min(oi * max_bw, max_flops)], 'k:')
             plt.annotate(label, xy=(oi, flopss[label]), xytext=(3, -20),
                          rotation=-90, textcoords='offset points', size=10)
-
-        # Enforce axis limits, set values and labels
-        ax.set_ylim(yvals[0], yvals[-1])
-        ax.set_yticks(yvals)
+        self.set_xaxis(ax, xlabel, values=xvals)
+        self.set_yaxis(ax, ylabel, values=yvals)
+        # Convert MFlops to GFlops in plot
         ax.set_yticklabels(yvals / 1000)
-        ax.set_ylabel('Performance (GFlops/s)')
-        ax.set_xlim(xvals[0], xvals[-1])
-        ax.set_xticks(xvals)
-        ax.set_xticklabels(xvals)
-        ax.set_xlabel('Operational intensity (Flops/Byte)')
         return self.save_figure(fig, figname) if save else fig, ax
