@@ -7,6 +7,13 @@ from collections import Mapping
 __all__ = ['Plotter']
 
 
+def _logscale_limits(minval, maxval, logbase, dtype):
+    """ Compute log-scale values from min and max values """
+    vmin = floor(log(minval, logbase))
+    vmax = ceil(log(maxval, logbase))
+    return dtype(logbase) ** np.linspace(vmin, vmax, vmax - vmin + 1, dtype=dtype)
+
+
 class Plotter(object):
     """ Plotting utility that provides data and basic diagram utilities. """
 
@@ -30,6 +37,24 @@ class Plotter(object):
         self.parser.add_argument('--max-flops', metavar='max_flops', type=float,
                                  help='Maximum flop rate for roofline plots')
 
+    def set_xaxis(self, axis, label, minval=None, maxval=None,
+                  logbase=2., dtype=np.int32):
+        if minval and maxval:
+            xvals = _logscale_limits(minval, maxval, logbase, dtype)
+            axis.set_xlim(xvals[0], xvals[-1])
+            axis.set_xticks(xvals)
+            axis.set_xticklabels(xvals)
+        axis.set_xlabel(label)
+
+    def set_yaxis(self, axis, label, minval=None, maxval=None,
+                  logbase=2., dtype=np.int32):
+        if minval and maxval:
+            yvals = _logscale_limits(minval, maxval, logbase, dtype)
+            axis.set_ylim(yvals[0], yvals[-1])
+            axis.set_yticks(yvals)
+            axis.set_yticklabels(yvals)
+        axis.set_ylabel(label)
+
     def save_figure(self, figure, figname):
         plotdir = self.bench.args.plotdir
         if not path.exists(plotdir):
@@ -39,7 +64,8 @@ class Plotter(object):
         figure.savefig(figpath, format='pdf', facecolor='white',
                        orientation='landscape', bbox_inches='tight')
 
-    def plot_strong_scaling(self, figname, nprocs, time, save=True):
+    def plot_strong_scaling(self, figname, nprocs, time, save=True,
+                            ylabel='Wall time (s)'):
         """ Plot a strong scaling diagram and according parallel efficiency.
 
         :param nprocs: List of processor counts or a dict mapping labels to processors
@@ -53,26 +79,22 @@ class Plotter(object):
             for i, label in enumerate(nprocs.keys()):
                 ax.loglog(nprocs[label], time[label], label=label,
                           linewidth=2, linestyle='solid', marker=self.marker[i])
-            ymin = floor(log(min([min(t) for t in time.values() if len(t) > 0]), 2.))
-            ymax = ceil(log(max([max(t) for t in time.values() if len(t) > 0]), 2.))
+            ymin = min([min(t) for t in time.values() if len(t) > 0])
+            ymax = max([max(t) for t in time.values() if len(t) > 0])
         else:
             ax.loglog(nprocs, time, linewidth=2, linestyle='solid', marker=self.marker[0])
-            ymin = floor(log(min(time), 2.))
-            ymax = ceil(log(max(time), 2.))
+            ymin = min(time)
+            ymax = max(time)
 
         # Add legend if labels were used
         if isinstance(nprocs, Mapping):
             ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
         # Enforce power-of-2 log scale for time
-        yvals = 2.0 ** np.linspace(ymin, ymax, ymax-ymin+1)
-        ax.set_ylim(yvals[0], yvals[-1])
-        ax.set_yticks(yvals)
-        ax.set_yticklabels(yvals)
-        ax.set_ylabel('Wall time (s)')
         ax.set_xlim(nprocs[0], nprocs[-1])
         ax.set_xticks(nprocs)
         ax.set_xticklabels(nprocs)
         ax.set_xlabel('Number of processors')
+        self.set_yaxis(ax, ylabel, ymin, ymax, logbase=2.)
         return self.save_figure(fig, figname) if save else fig, ax
 
     def plot_parallel_efficiency(self, figname, nprocs, time, save=True):
@@ -102,14 +124,15 @@ class Plotter(object):
         ax.set_xlabel('Number of processors')
         return self.save_figure(fig, figname) if save else fig, ax
 
-    def plot_error_cost(self, figname, error, time, annotations=None, save=True):
+    def plot_error_cost(self, figname, error, time, annotations=None, save=True,
+                        xlabel='Error in L2 norm', ylabel='Wall time (s)'):
         """ Plot an error cost diagram for the given error and time data.
 
         :param figname: Name of output file
         :param error: List of error values or a dict mapping labels to values lists
         :param time: List of time measurements or a dict mapping labels to values lists
-        :param save: Whether to save the plot; if False a tuple (fig, axis) is returned
         :param annotations: Optional list of point annotations
+        :param save: Whether to save the plot; if False a tuple (fig, axis) is returned
         """
         assert(isinstance(error, Mapping) == isinstance(time, Mapping))
         fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
@@ -119,32 +142,23 @@ class Plotter(object):
             for i, label in enumerate(error.keys()):
                 ax.loglog(error[label], time[label], label=label,
                           linewidth=2, linestyle='solid', marker=self.marker[i])
-            ymin = floor(log(min([min(t) for t in time.values() if len(t) > 0]), 2.))
-            ymax = ceil(log(max([max(t) for t in time.values() if len(t) > 0]), 2.))
             if annotations is not None:
                 for label in annotations:
                     for x, y, a in zip(error[label], time[label], annotations[label]):
                         plt.annotate(a, xy=(x, y), xytext=(4, 2),
                                      textcoords='offset points', size=8)
+            ymin = min([min(t) for t in time.values()])
+            ymax = max([max(t) for t in time.values()])
         else:
             ax.loglog(error, time, linewidth=2, linestyle='solid', marker=self.marker[0])
-            ymin = floor(log(min(time), 2.))
-            ymax = ceil(log(max(time), 2.))
+            ymin = min(time)
+            ymax = max(time)
 
-        # Add legend if labels were used
         if isinstance(error, Mapping):
             ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
-        # Enforce power-of-2 log scale for time
-        yvals = 2.0 ** np.linspace(ymin, ymax, ymax-ymin+1)
-        ax.set_ylim(yvals[0], yvals[-1])
-        ax.set_yticks(yvals)
-        ax.set_yticklabels(yvals)
-        ax.set_ylabel('Wall time (s)')
-        ax.set_xlabel('Error in L2 norm')
-        if save:
-            self.save_figure(fig, figname)
-        else:
-            return fig, ax
+        self.set_xaxis(ax, xlabel)
+        self.set_yaxis(ax, ylabel, ymin, ymax, logbase=2.)
+        return self.save_figure(fig, figname) if save else fig, ax
 
     def plot_roofline(self, figname, flopss, intensity, max_bw=None, max_flops=None, save=True):
         """ Plot performance on a roofline graph with given limits.
