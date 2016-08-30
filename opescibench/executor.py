@@ -22,7 +22,7 @@ class Executor(object):
         """ This methods needs to be overridden byt the user. """
         raise NotImplementedError("No custom executor function specified")
 
-    def register(self, event, value, measure='time'):
+    def register(self, value, event='execute', measure='time'):
         """
         Register a single timing value for a given event key.
 
