@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 from math import log, floor, ceil
 from os import path, makedirs
@@ -32,6 +31,10 @@ class Plotter(object):
     marker = ['D', 'o', '^', 'v']
 
     def __init__(self, benchmark, parser):
+        import matplotlib as mpl
+        mpl.use("Agg")
+        import matplotlib.pyplot as plt
+
         self.bench = benchmark
 
         self.parser = parser

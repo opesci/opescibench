@@ -14,11 +14,6 @@ except ImportError:
     # Assume serial
     rank = 0
 
-try:
-    import matplotlib as mpl
-    mpl.use("Agg")
-except (ImportError, AttributeError):
-    print("Importing matplotlib failed, plot functionality not available.")
 
 __all__ = ['Benchmark']
 
