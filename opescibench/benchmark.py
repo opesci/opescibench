@@ -83,7 +83,7 @@ class Benchmark(object):
         """ Convert parameter tuple to string """
         return '_'.join(['%s%s' % p for p in params])
 
-    def lookup(self, params={}, event=None, measure='time', category='timings'):
+    def lookup(self, params={}, event='execute', measure='time', category='timings'):
         """ Lookup a set of results accoridng to a parameter set. """
         result = []
         for params in self.sweep(params):
