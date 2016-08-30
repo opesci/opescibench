@@ -193,3 +193,31 @@ class Plotter(object):
         # Convert MFlops to GFlops in plot
         ax.set_yticklabels(yvals / 1000)
         return self.save_figure(fig, figname) if save else fig, ax
+
+
+    def plot_comparison(self, figname, mode, time, save=True,
+                            xlabel='Execution mode', ylabel='Wall time (s)'):
+        """Plot bar chart comparison between different execution modes.
+
+        :param mode: List of modes or a dict mapping labels to processors
+        :param time: List of timings or a dict mapping labels to timings
+        """
+        assert(isinstance(mode, Mapping) == isinstance(time, Mapping))
+        fig, ax = self.create_figure(figname)
+        offsets = np.arange(len(mode))
+        width = 0.8
+
+        if isinstance(mode, Mapping):
+            raise NotImplementedError('Custom labels not yet supported for bar chart comparison')
+        else:
+            ax.bar(offsets + .1, time, width)
+            ymin = min(time)
+            ymax = max(time)
+
+        # Add legend if labels were used
+        if isinstance(mode, Mapping):
+            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
+        ax.set_xticks(offsets + .5)
+        ax.set_xticklabels(mode)
+        self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
+        return self.save_figure(fig, figname) if save else fig, ax
