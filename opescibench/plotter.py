@@ -35,21 +35,8 @@ class Plotter(object):
     dpi = 300
     marker = ['D', 'o', '^', 'v']
 
-    def __init__(self, benchmark, parser):
-        self.bench = benchmark
-
-        self.parser = parser
-        self.parser.add_argument('--plottype', default='error',
-                                 choices=('error', 'strong', 'roofline'),
-                                 help='Type of plot to generate: error-cost or roofline')
-        self.parser.add_argument('-i', '--resultsdir', default='results',
-                                 help='Directory containing results')
-        self.parser.add_argument('-o', '--plotdir', default='plots',
-                                 help='Directory to store generated plots')
-        self.parser.add_argument('--max-bw', metavar='max_bw', type=float,
-                                 help='Maximum memory bandwidth for roofline plots')
-        self.parser.add_argument('--max-flops', metavar='max_flops', type=float,
-                                 help='Maximum flop rate for roofline plots')
+    def __init__(self, plotdir='plots'):
+        self.plotdir = plotdir
 
     def create_figure(self, figname):
         fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
@@ -71,10 +58,9 @@ class Plotter(object):
         axis.set_ylabel(label)
 
     def save_figure(self, figure, figname):
-        plotdir = self.bench.args.plotdir
-        if not path.exists(plotdir):
-            makedirs(plotdir)
-        figpath = path.join(plotdir, figname)
+        if not path.exists(self.plotdir):
+            makedirs(self.plotdir)
+        figpath = path.join(self.plotdir, figname)
         print "Plotting %s " % figpath
         figure.savefig(figpath, format='pdf', facecolor='white',
                        orientation='landscape', bbox_inches='tight')
@@ -179,8 +165,6 @@ class Plotter(object):
         assert(isinstance(flopss, Mapping) and isinstance(intensity, Mapping))
         fig, ax = self.create_figure(figname)
 
-        max_bw = max_bw or self.bench.args.max_bw
-        max_flops = max_flops or self.bench.args.max_flops
         assert(max_bw is not None and max_flops is not None)
 
         # Derive axis values for flops rate and operational intensity
