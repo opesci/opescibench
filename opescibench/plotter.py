@@ -46,14 +46,14 @@ class Plotter(object):
     def set_xaxis(self, axis, label, values=None):
         if values is not None:
             axis.set_xlim(values[0], values[-1])
-            axis.set_xticks(values)
+            axis.set_xticks(np.linspace(values[0], values[-1], len(values)))
             axis.set_xticklabels(values)
         axis.set_xlabel(label)
 
     def set_yaxis(self, axis, label, values=None):
         if values is not None:
             axis.set_ylim(values[0], values[-1])
-            axis.set_yticks(values)
+            axis.set_yticks(np.linspace(values[0], values[-1], len(values)))
             axis.set_yticklabels(values)
         axis.set_ylabel(label)
 
