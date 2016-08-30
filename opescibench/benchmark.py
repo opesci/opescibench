@@ -28,40 +28,26 @@ def get_argparsers(**kwargs):
 
 
 class Benchmark(object):
-    """ Class encapsulating a set of benchmark runs. """
+    """Class storing performance data for a set of benchmark runs
+    indexed by a multi-parameter key.
 
-    def __init__(self, name, **kwargs):
+    :param parameters: Dict of parameter names and value ranges that
+                       defines the parameter space for this benchmark.
+    :param resultsdir: Optional, define directory to store results in;
+                       default: 'results'.
+    :param name: Optional, set name of the benchmark instance;
+                 default: 'Benchmark'.
+    """
+
+    def __init__(self, parameters, resultsdir='results', name='Benchmark'):
         self.name = name
-        # Initialise root arguemnt parser and bench/plot subparsers
-        self._root_parser, self.parser, plot_parser = get_argparsers(**kwargs)
-        self.parser.add_argument('-i', '--resultsdir', default='results',
-                                 help='Directory containing results')
+        self.resultsdir = resultsdir
 
-        # Create plotter with a dedicated subparser
-        self.plotter = Plotter(self, plot_parser, **kwargs)
-
-        self._params = []
-        self._values = {}
+        self._params = parameters.keys()
+        self._values = parameters
 
         self.timings = {}
         self.meta = {}
-
-    def add_parameter(self, name, *parserargs, **parserkwargs):
-        self._params += [name.lstrip('-')]
-        self.parser.add_argument(name, *parserargs, **parserkwargs)
-        self.plotter.parser.add_argument(name, *parserargs, **parserkwargs)
-
-    def add_parameter_value(self, name, values):
-        self._params += [name]
-        self._values[name] = values
-
-    def parse_args(self, **kwargs):
-        """ Parse arguments using the root parser. """
-        self.args = self._root_parser.parse_args(**kwargs)
-        # Update value dict according to input args
-        for p in self.params:
-            if hasattr(self.args, p):
-                self._values[p] = getattr(self.args, p)
 
     @property
     def params(self):
@@ -127,9 +113,8 @@ class Benchmark(object):
         """ Save all timing results in individually keyed files. """
         if rank > 0:
             return
-        resultsdir = self.args.resultsdir
-        if not path.exists(resultsdir):
-            makedirs(resultsdir)
+        if not path.exists(self.resultsdir):
+            makedirs(self.resultsdir)
         timestamp = datetime.now().strftime('%Y-%m-%dT%H%M%S')
 
         for key in self.timings.keys():
@@ -139,16 +124,15 @@ class Benchmark(object):
             datadict['timings'] = self.timings[key]
 
             filename = '%s_%s.json' % (self.name, self.param_string(key))
-            with open(path.join(resultsdir, filename), 'w') as f:
+            with open(path.join(self.resultsdir, filename), 'w') as f:
                 json.dump(datadict, f, indent=4)
 
     def load(self):
         """ Load timing results from individually keyed files. """
-        resultsdir = self.args.resultsdir
         for params in self.sweep():
             filename = '%s_%s.json' % (self.name, self.param_string(params.items()))
             try:
-                with open(path.join(resultsdir, filename), 'r') as f:
+                with open(path.join(self.resultsdir, filename), 'r') as f:
                     datadict = json.loads(f.read())
                     self.timings[tuple(params.items())] = datadict['timings']
                     self.meta[tuple(params.items())] = datadict['meta']
