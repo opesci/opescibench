@@ -85,16 +85,16 @@ class Benchmark(object):
 
     def lookup(self, params={}, event='execute', measure='time', category='timings'):
         """ Lookup a set of results accoridng to a parameter set. """
-        result = []
+        result = {}
         for params in self.sweep(params):
             key = tuple(params.items())
             datadict = getattr(self, category)
             if key in datadict:
                 if event is None:
-                    result += [datadict[key][measure]]
+                    result[key] = datadict[key][measure]
                 else:
-                    result += [datadict[key][event][measure]]
-        return array(result)
+                    result[key] = datadict[key][event][measure]
+        return result
 
     def execute(self, executor, warmups=1, repeats=3):
         """
