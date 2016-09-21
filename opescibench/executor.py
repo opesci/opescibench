@@ -1,3 +1,5 @@
+from opescibench.utils import bench_print
+
 from collections import defaultdict
 
 __all__ = ['Executor']
@@ -46,10 +48,12 @@ class Executor(object):
             self.run(**params)
             self.teardown(**params)
 
-        for _ in range(repeats):
+        for i in range(repeats):
+            bench_print("--- Run %d ---" % i)
             self.setup(**params)
             self.run(**params)
             self.teardown(**params)
+            bench_print("--- Run %d finished ---" % i, post=1)
 
         # Average timings across repeats
         for event in self.timings.keys():
