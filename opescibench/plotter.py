@@ -4,7 +4,7 @@ from os import path, makedirs
 from collections import Mapping
 import matplotlib as mpl
 # The below is needed on certain clusters
-# mpl.use("Agg")
+mpl.use("Agg")
 import matplotlib.pyplot as plt
 
 
