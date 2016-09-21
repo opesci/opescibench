@@ -57,6 +57,10 @@ class Benchmark(object):
         """ Lexicographically sorted parameter key """
         return tuple(sorted(self._params))
 
+    @property
+    def loaded(self):
+        return self.timings and self.meta
+
     def values(self, keys=None):
         """ Sorted dict of parameter-value mappings for all parameters
 
