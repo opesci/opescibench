@@ -150,59 +150,78 @@ class Plotter(object):
         self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
         return self.save_figure(fig, figname) if save else fig, ax
 
-    def plot_roofline(self, problem, flops, intensity,
+    def plot_roofline(self, problem, flopss, intensity,
                       max_bw=None, max_flops=None, save=True,
                       xlabel='Operational intensity (Flops/Byte)',
                       ylabel='Performance (GFlops/s)'):
         """ Plot performance on a roofline graph with given limits.
 
         :param problem: Dict describing the problem instance
-        :param flops: Dict of labels to flops performed in MFlops
+        :param flopss: Dict of labels to flops per second performed (GFlops/s)
         :param intensity: Dict of labels to operational intensity values (Flops/B)
         :param max_bw: Maximum achievable memory bandwidth; determines roofline slope
         :param max_flops: Maximum achievable flop rate; determines roof of the diagram
         :param save: Whether to save the plot; if False a tuple (fig, axis) is returned
         """
-        assert(isinstance(flops, Mapping) and isinstance(intensity, Mapping))
+        assert(isinstance(flopss, Mapping) and isinstance(intensity, Mapping))
         assert(max_bw is not None and max_flops is not None)
+
+        trim = lambda s: str(s).replace(" ", "")
 
         name = problem["name"]
         compiler = problem["compiler"]
-        grid = problem["grid"]
+        grid = trim(problem["grid"])
         spacing = problem["spacing"]
-        space_order = str(problem["space_order"])
-        time_order = str(problem["time_order"])
+        space_order = trim(problem["space_order"])
+        time_order = trim(problem["time_order"])
 
         figname = "%s_dim%s_so%s_to%s.pdf" % (name, grid, space_order, time_order)
         fig, ax = self.create_figure(figname)
 
-        ax.set_title("%s %s so=%s to=%s" % (name, grid, space_order, time_order))
+        ax.set_title("%s %s so=%s to=%s" % (name, grid, space_order, time_order),
+                     fontsize=11)
 
-        # Derive axis values for flops rate and operational intensity
+        # Derive x-axis values for and operational intensity
         xvals = scale_limits(min(intensity.values()),
                              max(intensity.values()),
                              base=2., type='log')
-        yvals = scale_limits(min(flops.values()),
-                             max(flops.values()),
+
+        # Make sure the CPU bound is visible by adding, if necessary, some x-values
+        visible = False
+        while not visible:
+            roofline = xvals * max_bw
+            roofline[roofline > max_flops] = max_flops
+            idx = (roofline >= max_flops).argmax()
+            if idx == 0:
+                # CPU bound not yet visible
+                xvals = np.append(xvals, xvals[-1]*2)
+            else:
+                x_roofl = np.insert(xvals, idx, max_flops / max_bw)
+                roofline = np.insert(roofline, idx, max_flops)
+                ax.plot(x_roofl, roofline, 'k-', linewidth=2)
+                visible = True
+
+        # Derive y-axis values for performance
+        yvals = scale_limits(min(flopss.values()),
+                             max(flopss.values() + roofline[-1]),
                              base=10., type='log')
-        roofline = xvals * max_bw
-        roofline[roofline > max_flops] = max_flops
-        idx = (roofline >= max_flops).argmax()
-        x_roofl = np.insert(xvals, idx, max_flops / max_bw)
-        roofline = np.insert(roofline, idx, max_flops)
-        ax.loglog(x_roofl, roofline, 'k-')
+
+        # TODO: add lambda function to specify how to group the /label/ key in
+        # /flopss/ and /intensity/
 
         # Insert roofline points
-        for label in flops.keys():
+        for label in flopss.keys():
             oi = intensity[label]
-            ax.loglog(oi, flops[label], 'k%s' % self.marker[0])
+            ax.loglog(oi, flopss[label], 'k%s' % self.marker[0])
+            # Also add a dashed line from plot bottom to point value
             ax.plot([oi, oi], [yvals[0], min(oi * max_bw, max_flops)], 'k:')
-            plt.annotate(label, xy=(oi, flops[label]), xytext=(2, -13),
-                         rotation=-45, textcoords='offset points', size=10)
+            plt.annotate(label, xy=(oi, flopss[label]), xytext=(2, -13),
+                         rotation=-45, textcoords='offset points', size=9)
         self.set_xaxis(ax, xlabel, values=xvals)
         self.set_yaxis(ax, ylabel, values=yvals)
-        # Convert MFlops to GFlops in plot
-        ax.set_yticklabels(yvals / 1000)
+
+        from IPython import embed; embed()
+
         return self.save_figure(fig, figname) if save else fig, ax
 
 
