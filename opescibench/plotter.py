@@ -43,15 +43,17 @@ class Plotter(object):
         ax = fig.add_subplot(111)
         return fig, ax
 
-    def set_xaxis(self, axis, label, values=None):
+    def set_xaxis(self, axis, label, values=None, dtype=np.float32):
         if values is not None:
+            values = np.array(values).astype(dtype)
             axis.set_xlim(values[0], values[-1])
             axis.set_xticks(values)
             axis.set_xticklabels(values)
         axis.set_xlabel(label)
 
-    def set_yaxis(self, axis, label, values=None):
+    def set_yaxis(self, axis, label, values=None, dtype=np.float32):
         if values is not None:
+            values = np.array(values).astype(dtype)
             axis.set_ylim(values[0], values[-1])
             axis.set_yticks(values)
             axis.set_yticklabels(values)
@@ -89,7 +91,7 @@ class Plotter(object):
         # Add legend if labels were used
         if isinstance(nprocs, Mapping):
             ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
-        self.set_xaxis(ax, xlabel, values=nprocs)
+        self.set_xaxis(ax, xlabel, values=nprocs, dtype=np.int32)
         self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
         return self.save_figure(fig, figname) if save else fig, ax
 
@@ -188,10 +190,9 @@ class Plotter(object):
             ax.plot([oi, oi], [yvals[0], min(oi * max_bw, max_flops)], 'k:')
             plt.annotate(label, xy=(oi, flopss[label]), xytext=(2, -13),
                          rotation=-45, textcoords='offset points', size=8)
-        self.set_xaxis(ax, xlabel, values=xvals)
-        self.set_yaxis(ax, ylabel, values=yvals)
+        self.set_xaxis(ax, xlabel, values=xvals, dtype=np.int32)
+        self.set_yaxis(ax, ylabel, values=yvals, dtype=np.int32)
         # Convert MFlops to GFlops in plot
-        ax.set_yticklabels(yvals)
         return self.save_figure(fig, figname) if save else fig, ax
 
 
