@@ -186,8 +186,8 @@ class Plotter(object):
             oi = intensity[label]
             ax.loglog(oi, flopss[label], 'k%s' % self.marker[0])
             ax.plot([oi, oi], [yvals[0], min(oi * max_bw, max_flops)], 'k:')
-            plt.annotate(label, xy=(oi, flopss[label]), xytext=(3, -20),
-                         rotation=-90, textcoords='offset points', size=10)
+            plt.annotate(label, xy=(oi, flopss[label]), xytext=(2, -13),
+                         rotation=-45, textcoords='offset points', size=8)
         self.set_xaxis(ax, xlabel, values=xvals)
         self.set_yaxis(ax, ylabel, values=yvals)
         # Convert MFlops to GFlops in plot
