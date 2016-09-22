@@ -20,7 +20,7 @@ def scale_limits(minval, maxval, base, type='log'):
         basemin = floor(float(minval) / base)
         basemax = ceil(float(maxval) / base)
     nvals = basemax - basemin + 1
-    dtype = np.int32 if abs(minval) > 1. else np.float32
+    dtype = np.float32
     basevals = np.linspace(basemin, basemax, nvals, dtype=dtype)
     if type == 'log':
         return dtype(base) ** basevals
