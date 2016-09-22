@@ -168,12 +168,12 @@ class Plotter(object):
         assert(max_bw is not None and max_flops is not None)
 
         # Derive axis values for flops rate and operational intensity
-        xvals = scale_limits(min(intensity.values()),
-                              max(intensity.values()),
-                              base=2., type='log')
-        yvals = scale_limits(min(flopss.values()),
-                              max(flopss.values()),
-                              base=10., type='log')
+        xmax = max(intensity.values() + [float(max_flops) / max_bw])
+        ymax = max(flopss.values() + [max_flops])
+        xvals = scale_limits(min(intensity.values()), xmax, base=2., type='log')
+        yvals = scale_limits(min(flopss.values()), ymax, base=10., type='log')
+
+        # Create the roofline
         roofline = xvals * max_bw
         roofline[roofline > max_flops] = max_flops
         idx = (roofline >= max_flops).argmax()
