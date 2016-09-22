@@ -156,10 +156,10 @@ class Plotter(object):
         """ Plot performance on a roofline graph with given limits.
 
         :param figname: Name of output file
-        :param flopss: Dict of labels to flop rates (MFlops/s)
+        :param flopss: Dict of labels to flop rates (GFlops/s)
         :param intensity: Dict of labels to operational intensity values (Flops/B)
-        :param max_bw: Maximum achievable memory bandwidth; determines roofline slope
-        :param max_flops: Maximum achievable flop rate; determines roof of the diagram
+        :param max_bw: Maximum achievable memory bandwidth (GB/s); determines roofline slope
+        :param max_flops: Maximum achievable flop rate (GFlops/s); determines roof of the diagram
         :param save: Whether to save the plot; if False a tuple (fig, axis) is returned
         """
         assert(isinstance(flopss, Mapping) and isinstance(intensity, Mapping))
@@ -171,7 +171,7 @@ class Plotter(object):
         xmax = max(intensity.values() + [float(max_flops) / max_bw])
         ymax = max(flopss.values() + [max_flops])
         xvals = scale_limits(min(intensity.values()), xmax, base=2., type='log')
-        yvals = scale_limits(min(flopss.values()), ymax, base=10., type='log')
+        yvals = scale_limits(min(flopss.values()), ymax, base=2., type='log')
 
         # Create the roofline
         roofline = xvals * max_bw
@@ -191,7 +191,7 @@ class Plotter(object):
         self.set_xaxis(ax, xlabel, values=xvals)
         self.set_yaxis(ax, ylabel, values=yvals)
         # Convert MFlops to GFlops in plot
-        ax.set_yticklabels(yvals / 1000)
+        ax.set_yticklabels(yvals)
         return self.save_figure(fig, figname) if save else fig, ax
 
 
