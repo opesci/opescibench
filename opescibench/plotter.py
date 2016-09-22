@@ -11,6 +11,11 @@ import matplotlib.pyplot as plt
 __all__ = ['Plotter']
 
 
+# Adjust font size
+font = {'size'   : 10}
+mpl.rc('font', **font)
+
+
 def scale_limits(minval, maxval, base, type='log'):
     """ Compute axis values from min and max values """
     if type == 'log':
