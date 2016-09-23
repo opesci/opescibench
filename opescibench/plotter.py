@@ -39,6 +39,7 @@ class Plotter(object):
     figsize = (6, 4)
     dpi = 300
     marker = ['D', 'o', '^', 'v']
+    color = ['r', 'b', 'g', 'y']
 
     def __init__(self, plotdir='plots'):
         self.plotdir = plotdir
@@ -255,6 +256,7 @@ class RooflinePlotter(Plotter):
         super(RooflinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
         self.title = title
+        self.legend = {}
 
         self.max_bw = max_bw
         self.max_flops = max_flops
@@ -275,7 +277,7 @@ class RooflinePlotter(Plotter):
         self.yvals = scale_limits(min(self.yvals), max(self.yvals), base=2., type='log')
         # Add a dotted lines for stored OI values
         for oi in self.oi_lines:
-            self.ax.plot([oi, oi], [self.yvals[0], min(oi * self.max_bw, self.max_flops)], 'k:')
+            self.ax.plot([oi, oi], [1., min(oi * self.max_bw, self.max_flops)], 'k:')
 
         # Add the roofline
         roofline = self.xvals * self.max_bw
@@ -290,20 +292,40 @@ class RooflinePlotter(Plotter):
         ylabel='Performance (GFlops/s)'
         self.set_xaxis(self.ax, xlabel, values=self.xvals, dtype=np.int32)
         self.set_yaxis(self.ax, ylabel, values=self.yvals, dtype=np.int32)
+        self.ax.legend(loc='best', ncol=2, fancybox=True, fontsize=10)
         self.save_figure(self.fig, self.figname)
 
-    def add_point(self, gflops, oi, label):
+    def add_point(self, gflops, oi, style=None, label=None, annotate=None,
+                  oi_line=True, oi_annotate=None):
         """Adds a single point measurement to the roofline plot
 
         :param gflops: Achieved performance in GFlops/s (y axis value)
         :param oi: Operational intensity in Flops/Byte (x axis value)
-        :param label: Label to print next to point
+        :param style: Optional plotting style for point data
+        :param label: Optional legend label for point data
+        :param annotate: Optional text to print next to point
+        :param oi_line: Draw a vertical dotted line for the OI value
+        :param oi_annotate: Optional text to print on the vertical OI line
         """
         self.xvals += [oi]
         self.yvals += [gflops]
-        self.oi_lines += [oi]
+
+        # Add dotted OI line and annotate
+        if oi_line:
+            oi_top = min(oi * self.max_bw, self.max_flops)
+            self.ax.plot([oi, oi], [1., oi_top], 'k:')
+            if oi_annotate:
+                plt.annotate(oi_annotate, xy=(oi, 0.12), size=8, rotation=-90,
+                             xycoords=('data', 'axes fraction'))
 
         # Plot and annotate the data point
-        self.ax.loglog(oi, gflops, 'k%s' % self.marker[0])
-        plt.annotate(label, xy=(oi, gflops), xytext=(2, -13),
-                     rotation=-45, textcoords='offset points', size=8)
+        style = style or 'k%s' % self.marker[0]
+        self.ax.plot(oi, gflops, style,
+                       label=label if label not in self.legend else None)
+        if annotate is not None:
+            plt.annotate(annotate, xy=(oi, gflops), xytext=(2, -13),
+                         rotation=-45, textcoords='offset points', size=8)
+
+        # Record legend labels to avoid replication
+        if label is not None:
+            self.legend[label] = style
