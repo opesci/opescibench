@@ -159,7 +159,7 @@ class Plotter(object):
 
     def plot_roofline(self, figname, flopss, intensity, max_bw=None, max_flops=None,
                       save=True, xlabel='Operational intensity (Flops/Byte)',
-                      ylabel='Performance (GFlops/s)'):
+                      ylabel='Performance (GFlops/s)', title=None):
         """ Plot performance on a roofline graph with given limits.
 
         :param figname: Name of output file
@@ -171,6 +171,8 @@ class Plotter(object):
         """
         assert(isinstance(flopss, Mapping) and isinstance(intensity, Mapping))
         fig, ax = self.create_figure(figname)
+        if title is not None:
+            ax.set_title(title)
 
         assert(max_bw is not None and max_flops is not None)
 
