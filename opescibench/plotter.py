@@ -11,6 +11,11 @@ import matplotlib.pyplot as plt
 __all__ = ['Plotter']
 
 
+# Adjust font size
+font = {'size'   : 10}
+mpl.rc('font', **font)
+
+
 def scale_limits(minval, maxval, base, type='log'):
     """ Compute axis values from min and max values """
     if type == 'log':
@@ -20,7 +25,7 @@ def scale_limits(minval, maxval, base, type='log'):
         basemin = floor(float(minval) / base)
         basemax = ceil(float(maxval) / base)
     nvals = basemax - basemin + 1
-    dtype = np.int32 if abs(minval) > 1. else np.float32
+    dtype = np.float32
     basevals = np.linspace(basemin, basemax, nvals, dtype=dtype)
     if type == 'log':
         return dtype(base) ** basevals
@@ -43,17 +48,19 @@ class Plotter(object):
         ax = fig.add_subplot(111)
         return fig, ax
 
-    def set_xaxis(self, axis, label, values=None):
+    def set_xaxis(self, axis, label, values=None, dtype=np.float32):
         if values is not None:
+            values = np.array(values).astype(dtype)
             axis.set_xlim(values[0], values[-1])
-            axis.set_xticks(np.linspace(values[0], values[-1], len(values)))
+            axis.set_xticks(values)
             axis.set_xticklabels(values)
         axis.set_xlabel(label)
 
-    def set_yaxis(self, axis, label, values=None):
+    def set_yaxis(self, axis, label, values=None, dtype=np.float32):
         if values is not None:
+            values = np.array(values).astype(dtype)
             axis.set_ylim(values[0], values[-1])
-            axis.set_yticks(np.linspace(values[0], values[-1], len(values)))
+            axis.set_yticks(values)
             axis.set_yticklabels(values)
         axis.set_ylabel(label)
 
@@ -89,7 +96,7 @@ class Plotter(object):
         # Add legend if labels were used
         if isinstance(nprocs, Mapping):
             ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
-        self.set_xaxis(ax, xlabel, values=nprocs)
+        self.set_xaxis(ax, xlabel, values=nprocs, dtype=np.int32)
         self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
         return self.save_figure(fig, figname) if save else fig, ax
 
@@ -152,28 +159,30 @@ class Plotter(object):
 
     def plot_roofline(self, figname, flopss, intensity, max_bw=None, max_flops=None,
                       save=True, xlabel='Operational intensity (Flops/Byte)',
-                      ylabel='Performance (GFlops/s)'):
+                      ylabel='Performance (GFlops/s)', title=None):
         """ Plot performance on a roofline graph with given limits.
 
         :param figname: Name of output file
-        :param flopss: Dict of labels to flop rates (MFlops/s)
+        :param flopss: Dict of labels to flop rates (GFlops/s)
         :param intensity: Dict of labels to operational intensity values (Flops/B)
-        :param max_bw: Maximum achievable memory bandwidth; determines roofline slope
-        :param max_flops: Maximum achievable flop rate; determines roof of the diagram
+        :param max_bw: Maximum achievable memory bandwidth (GB/s); determines roofline slope
+        :param max_flops: Maximum achievable flop rate (GFlops/s); determines roof of the diagram
         :param save: Whether to save the plot; if False a tuple (fig, axis) is returned
         """
         assert(isinstance(flopss, Mapping) and isinstance(intensity, Mapping))
         fig, ax = self.create_figure(figname)
+        if title is not None:
+            ax.set_title(title)
 
         assert(max_bw is not None and max_flops is not None)
 
         # Derive axis values for flops rate and operational intensity
-        xvals = scale_limits(min(intensity.values()),
-                              max(intensity.values()),
-                              base=2., type='log')
-        yvals = scale_limits(min(flopss.values()),
-                              max(flopss.values()),
-                              base=10., type='log')
+        xmax = max(intensity.values() + [float(max_flops) / max_bw])
+        ymax = max(flopss.values() + [max_flops])
+        xvals = scale_limits(min(intensity.values()), xmax, base=2., type='log')
+        yvals = scale_limits(min(flopss.values()), ymax, base=2., type='log')
+
+        # Create the roofline
         roofline = xvals * max_bw
         roofline[roofline > max_flops] = max_flops
         idx = (roofline >= max_flops).argmax()
@@ -186,12 +195,11 @@ class Plotter(object):
             oi = intensity[label]
             ax.loglog(oi, flopss[label], 'k%s' % self.marker[0])
             ax.plot([oi, oi], [yvals[0], min(oi * max_bw, max_flops)], 'k:')
-            plt.annotate(label, xy=(oi, flopss[label]), xytext=(3, -20),
-                         rotation=-90, textcoords='offset points', size=10)
-        self.set_xaxis(ax, xlabel, values=xvals)
-        self.set_yaxis(ax, ylabel, values=yvals)
+            plt.annotate(label, xy=(oi, flopss[label]), xytext=(2, -13),
+                         rotation=-45, textcoords='offset points', size=8)
+        self.set_xaxis(ax, xlabel, values=xvals, dtype=np.int32)
+        self.set_yaxis(ax, ylabel, values=yvals, dtype=np.int32)
         # Convert MFlops to GFlops in plot
-        ax.set_yticklabels(yvals / 1000)
         return self.save_figure(fig, figname) if save else fig, ax
 
 

@@ -1,9 +1,12 @@
 from opescibench.plotter import Plotter
+from opescibench.utils import bench_print
+
 from argparse import ArgumentParser
 from collections import OrderedDict
 from itertools import product
 from datetime import datetime
 from os import path, makedirs
+
 import json
 from numpy import array
 
@@ -54,6 +57,10 @@ class Benchmark(object):
         """ Lexicographically sorted parameter key """
         return tuple(sorted(self._params))
 
+    @property
+    def loaded(self):
+        return self.timings and self.meta
+
     def values(self, keys=None):
         """ Sorted dict of parameter-value mappings for all parameters
 
@@ -102,12 +109,19 @@ class Benchmark(object):
         for each combination of the parameter sweep.
         """
         for params in self.sweep():
+            bench_print("", pre=2)
+            bench_print("Running %s, %s, so=%d to=%d, nbpml=%d. Repeats: %d" %
+                        (self.name, str(params['dimensions']), params['space_order'],
+                         params['time_order'], params['nbpml'], repeats))
+
             # Execute the benchmark
             executor.execute(warmups=warmups, repeats=repeats, **params)
 
             # Store timing and meta data under the parameter key
             self.timings[tuple(params.items())] = executor.timings
             self.meta[tuple(params.items())] = executor.meta
+
+            bench_print("", post=2)
 
     def save(self):
         """ Save all timing results in individually keyed files. """
@@ -137,4 +151,4 @@ class Benchmark(object):
                     self.timings[tuple(params.items())] = datadict['timings']
                     self.meta[tuple(params.items())] = datadict['meta']
             except:
-                print "WARNING: Could not load file: %s" % filename
+                bench_print("WARNING: Could not load file: %s" % filename)
