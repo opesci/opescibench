@@ -8,7 +8,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
-__all__ = ['Plotter']
+__all__ = ['Plotter', 'RooflinePlotter']
 
 
 # Adjust font size
@@ -229,3 +229,81 @@ class Plotter(object):
         ax.set_xticklabels(mode)
         self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
         return self.save_figure(fig, figname) if save else fig, ax
+
+
+class RooflinePlotter(Plotter):
+    """Roofline plotter for generating generic roofline plots.
+
+    :params figname: Name of output file
+    :params plotdir: Directory to store the plot in
+    :params title: Plot title to be printed on top
+    :params max_bw: Maximum achievable memory bandwidth in GB/s.
+                    This defines the slope of the roofline.
+    :params max_flops: Maximum achievable performance in GFlops/s.
+                       This defines the roof of the roofline.
+
+    Example usage:
+
+    with RooflinePlotter(figname=..., plotdir=...,
+                         max_bw=..., max_flops=...) as roofline:
+        roofline.add_point(gflops[0], oi[0], label='Point A')
+        roofline.add_point(gflops[1], oi[1], label='Point B')
+    """
+
+    def __init__(self, figname='roofline', plotdir='plots', title=None,
+                 max_bw=None, max_flops=None):
+        super(RooflinePlotter, self).__init__(plotdir=plotdir)
+        self.figname = figname
+        self.title = title
+
+        self.max_bw = max_bw
+        self.max_flops = max_flops
+        self.xvals = [float(max_flops) / max_bw]
+        self.yvals = [max_flops]
+        # A set of OI values for which to add dotted lines
+        self.oi_lines = []
+
+    def __enter__(self):
+        self.fig, self.ax = self.create_figure(self.figname)
+        if self.title is not None:
+            self.ax.set_title(title)
+        return self
+
+    def __exit__(self, *args):
+        # Scale axis limits
+        self.xvals = scale_limits(min(self.xvals), max(self.xvals), base=2., type='log')
+        self.yvals = scale_limits(min(self.yvals), max(self.yvals), base=2., type='log')
+        # Add a dotted lines for stored OI values
+        for oi in self.oi_lines:
+            self.ax.plot([oi, oi], [self.yvals[0], min(oi * self.max_bw, self.max_flops)], 'k:')
+
+        # Add the roofline
+        roofline = self.xvals * self.max_bw
+        roofline[roofline > self.max_flops] = self.max_flops
+        idx = (roofline >= self.max_flops).argmax()
+        x_roofl = np.insert(self.xvals, idx, self.max_flops / self.max_bw)
+        roofline = np.insert(roofline, idx, self.max_flops)
+        self.ax.loglog(x_roofl, roofline, 'k-')
+
+        # Set axis labelling and generate plot file
+        xlabel='Operational intensity (Flops/Byte)'
+        ylabel='Performance (GFlops/s)'
+        self.set_xaxis(self.ax, xlabel, values=self.xvals, dtype=np.int32)
+        self.set_yaxis(self.ax, ylabel, values=self.yvals, dtype=np.int32)
+        self.save_figure(self.fig, self.figname)
+
+    def add_point(self, gflops, oi, label):
+        """Adds a single point measurement to the roofline plot
+
+        :param gflops: Achieved performance in GFlops/s (y axis value)
+        :param oi: Operational intensity in Flops/Byte (x axis value)
+        :param label: Label to print next to point
+        """
+        self.xvals += [oi]
+        self.yvals += [gflops]
+        self.oi_lines += [oi]
+
+        # Plot and annotate the data point
+        self.ax.loglog(oi, gflops, 'k%s' % self.marker[0])
+        plt.annotate(label, xy=(oi, gflops), xytext=(2, -13),
+                     rotation=-45, textcoords='offset points', size=8)
