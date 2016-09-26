@@ -92,7 +92,7 @@ class Benchmark(object):
 
     def lookup(self, params={}, event='execute', measure='time', category='timings'):
         """ Lookup a set of results accoridng to a parameter set. """
-        result = {}
+        result = OrderedDict()
         for params in self.sweep(params):
             key = tuple(params.items())
             datadict = getattr(self, category)
