@@ -110,9 +110,8 @@ class Benchmark(object):
         """
         for params in self.sweep():
             bench_print("", pre=2)
-            bench_print("Running %s, %s, so=%d to=%d, nbpml=%d. Repeats: %d" %
-                        (self.name, str(params['dimensions']), params['space_order'],
-                         params['time_order'], params['nbpml'], repeats))
+            bench_print("Running %d repeats - parameters: %s" % (repeats,
+                        ', '.join(['%s: %s' % (k, v) for k, v in params.items()])))
 
             # Execute the benchmark
             executor.execute(warmups=warmups, repeats=repeats, **params)
