@@ -1,6 +1,14 @@
 import sys
 
-__all__ = ['bench_print']
+try:
+    from mpi4py import MPI
+    mpi_rank = MPI.COMM_WORLD.rank
+except ImportError:
+    # Assume serial
+    mpi_rank = 0
+
+
+__all__ = ['bench_print', 'mpi_rank']
 
 
 def bench_print(msg, pre=0, post=0):
@@ -11,8 +19,11 @@ def bench_print(msg, pre=0, post=0):
         color = '%s'
 
     for i in range(pre):
-        print ""
+        if mpi_rank == 0:
+            print ""
     if msg:
-        print color % ("OpesciBench: %s" % msg)
+        if mpi_rank == 0:
+            print color % ("OpesciBench: %s" % msg)
     for i in range(post):
-        print ""
+        if mpi_rank == 0:
+            print ""

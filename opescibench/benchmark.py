@@ -1,5 +1,5 @@
 from opescibench.plotter import Plotter
-from opescibench.utils import bench_print
+from opescibench.utils import bench_print, mpi_rank as rank
 
 from argparse import ArgumentParser
 from collections import OrderedDict
@@ -9,13 +9,6 @@ from os import path, makedirs
 
 import json
 from numpy import array
-
-try:
-    from mpi4py import MPI
-    rank = MPI.COMM_WORLD.rank
-except ImportError:
-    # Assume serial
-    rank = 0
 
 
 __all__ = ['Benchmark']
