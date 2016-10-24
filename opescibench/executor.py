@@ -46,10 +46,12 @@ class Executor(object):
         """
 
         self.reset()
-        for _ in range(warmups):
+        for i in range(warmups):
+            bench_print("--- Warmup %d ---" % i)
             self.setup(**params)
             self.run(**params)
             self.teardown(**params)
+            bench_print("--- Warmup %d finished ---" % i, post=1)
 
         self.reset()
         for i in range(repeats):
