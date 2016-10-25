@@ -1,7 +1,7 @@
 import numpy as np
 from math import log, floor, ceil
 from os import path, makedirs
-from collections import Mapping, namedtuple
+from collections import Mapping, namedtuple, defaultdict
 try:
     import matplotlib as mpl
     # The below is needed on certain clusters
@@ -18,7 +18,7 @@ except ImportError:
 from opescibench.utils import bench_print
 
 
-__all__ = ['Plotter', 'RooflinePlotter']
+__all__ = ['Plotter', 'RooflinePlotter', 'BarchartPlotter']
 
 
 # Adjust font size
@@ -249,6 +249,66 @@ class Plotter(object):
         ax.set_xticklabels(mode)
         self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
         return self.save_figure(fig, figname) if save else fig, ax
+
+
+class BarchartPlotter(Plotter):
+    """Barchart plotter for generating direct comparison plots.
+
+    :params figname: Name of output file
+    :params plotdir: Directory to store the plot in
+    :params title: Plot title to be printed on top
+
+    Example usage:
+
+    with BarchartPlotter(figname=..., plotdir=...) as barchart:
+        barchart.add_point(gflops[0], oi[0], label='Point A')
+        barchart.add_point(gflops[1], oi[1], label='Point B')
+    """
+
+    def __init__(self, figname='barchart', plotdir='plots',
+                 title=None):
+        super(BarchartPlotter, self).__init__(plotdir=plotdir)
+        self.figname = figname
+        self.title = title
+        self.legend = {}
+        self.values = defaultdict(dict)
+
+    def __enter__(self):
+        self.fig, self.ax = self.create_figure(self.figname)
+        if self.title is not None:
+            self.ax.set_title(title)
+        return self
+
+    def __exit__(self, *args):
+        x_indices = np.arange(len(self.values)) + 0.1
+        width = 0.8 / len(self.legend)
+        for i, label in enumerate(self.legend):
+            yvals = [val[label] for val in self.values.values()]
+            lbl = self.ax.bar(x_indices + i * width, yvals, width,
+                              color=self.legend[label])
+
+        # Set axis labelling and generate plot file
+        self.ax.set_xticks(x_indices + width)
+        self.ax.set_xticklabels(self.values.keys())
+        self.set_yaxis(self.ax, 'Runtime (s)')
+        self.ax.legend(self.legend, loc='best', ncol=2,
+                       fancybox=True, fontsize=10)
+        self.save_figure(self.fig, self.figname)
+
+    def add_value(self, value, grouplabel=None, color=None, label=None):
+        """Adds a single point measurement to the barchart plot
+
+        :param value: Y-value of the given point measurement
+        :param grouplabel: Group label to be put on the X-axis
+        :param color: Optional plotting color for data point
+        :param label: Optional legend label for data point
+        """
+        # Record all points keyed by group and legend labels
+        self.values[grouplabel][label] = value
+
+        # Record legend labels to avoid replication
+        if label is not None:
+            self.legend[label] = color
 
 
 class RooflinePlotter(Plotter):
