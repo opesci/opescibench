@@ -18,7 +18,7 @@ except ImportError:
 from opescibench.utils import bench_print
 
 
-__all__ = ['Plotter', 'RooflinePlotter', 'BarchartPlotter']
+__all__ = ['Plotter', 'LinePlotter', 'RooflinePlotter', 'BarchartPlotter']
 
 
 # Adjust font size
@@ -249,6 +249,121 @@ class Plotter(object):
         ax.set_xticklabels(mode)
         self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
         return self.save_figure(fig, figname) if save else fig, ax
+
+
+class LinePlotter(Plotter):
+    """Line plotter for generating scaling or error-cost plots
+
+    :params figname: Name of output file
+    :params plotdir: Directory to store the plot in
+    :params title: Plot title to be printed on top
+
+    Example usage:
+
+    with LinePlotter(figname=..., plotdir=...) as plot:
+        plot.add_line(y_values, x_values, label='Strong scaling')
+    """
+
+    def __init__(self, figname='plot', plotdir='plots', title=None,
+                 plot_type='loglog', xlabel=None, ylabel=None,
+                 xtype=np.int32, ytype=np.int32):
+        super(LinePlotter, self).__init__(plotdir=plotdir)
+        self.figname = figname
+        self.title = title
+        self.legend = {}
+        self.plot_type = plot_type
+        self.xlabel = xlabel or 'Number of processors'
+        self.ylabel = ylabel or 'Wall time (s)'
+        self.xlim = None
+        self.ylim = None
+        self.xtype = xtype
+        self.ytype = ytype
+
+    def __enter__(self):
+        self.fig, self.ax = self.create_figure(self.figname)
+        self.plot = getattr(self.ax, self.plot_type)
+        if self.title is not None:
+            self.ax.set_title(title)
+        return self
+
+    def __exit__(self, *args):
+        # Set axis labelling and generate plot file
+        plttype = 'log' if self.plot_type in ['loglog', 'semilogx'] else 'lines'
+        xvals = scale_limits(self.xlim[0], self.xlim[1], base=2., type=plttype)
+        plttype = 'log' if self.plot_type in ['loglog', 'semilogy'] else 'lines'
+        yvals = scale_limits(self.ylim[0], self.ylim[1], base=2., type=plttype)
+        self.set_xaxis(self.ax, self.xlabel, values=xvals, dtype=self.xtype)
+        self.set_yaxis(self.ax, self.ylabel, values=yvals, dtype=self.ytype)
+        self.ax.legend(self.legend, loc='best', ncol=2,
+                       fancybox=True, fontsize=10)
+        self.save_figure(self.fig, self.figname)
+
+    def add_line(self, xvalues, yvalues, label=None, plt_type='loglog'):
+        """Adds a single line to the plot of from a set of measurements
+
+        :param yvalue: List of Y values of the  measurements
+        :param xvalue: List of X values of the  measurements
+        :param label: Optional legend label for data line
+        """
+        self.xlim = (min(xvalues + ([self.xlim[0]] if self.xlim else [])),
+                     max(xvalues + ([self.xlim[1]] if self.xlim else [])))
+        self.ylim = (min(yvalues + ([self.ylim[0]] if self.ylim else [])),
+                     max(yvalues + ([self.ylim[1]] if self.ylim else [])))
+        self.plot(xvalues, yvalues, label=label, linewidth=2,
+                  linestyle='solid')
+
+
+class BarchartPlotter(Plotter):
+    """Barchart plotter for generating direct comparison plots.
+
+    :params figname: Name of output file
+    :params plotdir: Directory to store the plot in
+    :params title: Plot title to be printed on top
+
+    Example usage:
+
+    with BarchartPlotter(figname=..., plotdir=...) as barchart:
+        barchart.add_point(gflops[0], oi[0], label='Point A')
+        barchart.add_point(gflops[1], oi[1], label='Point B')
+    """
+
+    def __init__(self, figname='barchart', plotdir='plots',
+                 title=None):
+        super(BarchartPlotter, self).__init__(plotdir=plotdir)
+        self.figname = figname
+        self.title = title
+        self.legend = {}
+        self.values = defaultdict(dict)
+
+    def __enter__(self):
+        self.fig, self.ax = self.create_figure(self.figname)
+        if self.title is not None:
+            self.ax.set_title(title)
+        return self
+
+    def __exit__(self, *args):
+        # Set axis labelling and generate plot file
+        # self.ax.set_xticks(x_indices + width)
+        # self.ax.set_xticklabels(self.values.keys())
+        self.set_yaxis(self.ax, 'Runtime (s)')
+        self.ax.legend(self.legend, loc='best', ncol=2,
+                       fancybox=True, fontsize=10)
+        self.save_figure(self.fig, self.figname)
+
+    def add_value(self, value, grouplabel=None, color=None, label=None):
+        """Adds a single point measurement to the barchart plot
+
+        :param value: Y-value of the given point measurement
+        :param grouplabel: Group label to be put on the X-axis
+        :param color: Optional plotting color for data point
+        :param label: Optional legend label for data point
+        """
+        # Record all points keyed by group and legend labels
+        self.values[grouplabel][label] = value
+
+        # Record legend labels to avoid replication
+        if label is not None:
+            self.legend[label] = color
 
 
 class BarchartPlotter(Plotter):
