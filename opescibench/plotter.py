@@ -2,10 +2,14 @@ import numpy as np
 from math import log, floor, ceil
 from os import path, makedirs
 from collections import Mapping
-import matplotlib as mpl
-# The below is needed on certain clusters
-# mpl.use("Agg")
-import matplotlib.pyplot as plt
+try:
+    import matplotlib as mpl
+    # The below is needed on certain clusters
+    # mpl.use("Agg")
+    import matplotlib.pyplot as plt
+except:
+    mpl = None
+    plt = None
 
 
 __all__ = ['Plotter', 'RooflinePlotter']
@@ -42,6 +46,9 @@ class Plotter(object):
     color = ['r', 'b', 'g', 'y']
 
     def __init__(self, plotdir='plots'):
+        if mpl is None or plt is None:
+            bench_print("Matplotlib/PyPlot not found - unable to plot.")
+            raise ImportError("Could not import matplotlib or pyplot")
         self.plotdir = plotdir
 
     def create_figure(self, figname):
