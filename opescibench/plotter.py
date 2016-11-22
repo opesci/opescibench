@@ -317,7 +317,8 @@ class RooflinePlotter(Plotter):
         :param label: Optional legend label for point data
         :param annotate: Optional text to print next to point
         :param oi_line: Draw a vertical dotted line for the OI value
-        :param oi_annotate: Optional text to print on the vertical OI line
+        :param oi_annotate: Optional text or options dict to add an annotation
+                            to the vertical OI line
         """
         self.xvals += [oi]
         self.yvals += [gflops]
@@ -326,9 +327,14 @@ class RooflinePlotter(Plotter):
         if oi_line:
             oi_top = min(oi * self.max_bw, self.max_flops)
             self.ax.plot([oi, oi], [1., oi_top], 'k:')
-            if oi_annotate:
-                plt.annotate(oi_annotate, xy=(oi, 0.12), size=8, rotation=-90,
-                             xycoords=('data', 'axes fraction'))
+            if oi_annotate is not None:
+                oi_ann = {'xy': (oi, 0.12), 'size': 8, 'rotation': -90,
+                          'xycoords': ('data', 'axes fraction')}
+                if isinstance(oi_annotate, Mapping):
+                    oi_ann.update(oi_annotate)
+                else:
+                    oi_ann['s'] = oi_annotate
+                plt.annotate(**oi_ann)
 
         # Plot and annotate the data point
         style = style or 'k%s' % self.marker[0]
