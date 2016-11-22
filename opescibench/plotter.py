@@ -341,8 +341,13 @@ class RooflinePlotter(Plotter):
         self.ax.plot(oi, gflops, style,
                        label=label if label not in self.legend_map else None)
         if annotate is not None:
-            plt.annotate(annotate, xy=(oi, gflops), xytext=(2, -13),
-                         rotation=-45, textcoords='offset points', size=8)
+            p_ann = {'xy': (oi, gflops), 'size': 8, 'rotation': -45,
+                     'xytext': (2, -13), 'textcoords': 'offset points'}
+            if isinstance(annotate, Mapping):
+                p_ann.update(annotate)
+            else:
+                p_ann['s'] = annotate
+            plt.annotate(**p_ann)
 
         # Record legend labels to avoid replication
         if label is not None:
