@@ -249,6 +249,8 @@ class RooflinePlotter(Plotter):
                     This defines the slope of the roofline.
     :params max_flops: Maximum achievable performance in GFlops/s.
                        This defines the roof of the roofline.
+    :params legend: Additional arguments for legend entries, default:
+                    {loc='best', ncol=2, fancybox=True, fontsize=10}
 
     Example usage:
 
@@ -259,11 +261,14 @@ class RooflinePlotter(Plotter):
     """
 
     def __init__(self, figname='roofline', plotdir='plots', title=None,
-                 max_bw=None, max_flops=None):
+                 max_bw=None, max_flops=None, legend=None):
         super(RooflinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
         self.title = title
-        self.legend = {}
+        self.legend = {'loc': 'best', 'ncol': 2,
+                       'fancybox': True, 'fontsize': 10}
+        self.legend.update(legend)  # Add user arguments to defaults
+        self.legend_map = {}  # Label -> style map for legend entries
 
         self.max_bw = max_bw
         self.max_flops = max_flops
@@ -299,7 +304,7 @@ class RooflinePlotter(Plotter):
         ylabel='Performance (GFlops/s)'
         self.set_xaxis(self.ax, xlabel, values=self.xvals, dtype=np.int32)
         self.set_yaxis(self.ax, ylabel, values=self.yvals, dtype=np.int32)
-        self.ax.legend(loc='best', ncol=2, fancybox=True, fontsize=10)
+        self.ax.legend(**self.legend)
         self.save_figure(self.fig, self.figname)
 
     def add_point(self, gflops, oi, style=None, label=None, annotate=None,
@@ -328,11 +333,11 @@ class RooflinePlotter(Plotter):
         # Plot and annotate the data point
         style = style or 'k%s' % self.marker[0]
         self.ax.plot(oi, gflops, style,
-                       label=label if label not in self.legend else None)
+                       label=label if label not in self.legend_map else None)
         if annotate is not None:
             plt.annotate(annotate, xy=(oi, gflops), xytext=(2, -13),
                          rotation=-45, textcoords='offset points', size=8)
 
         # Record legend labels to avoid replication
         if label is not None:
-            self.legend[label] = style
+            self.legend_map[label] = style
