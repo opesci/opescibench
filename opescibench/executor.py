@@ -47,19 +47,19 @@ class Executor(object):
 
         self.reset()
         for i in range(warmups):
-            bench_print("--- Warmup %d ---" % i)
+            bench_print("--- Warmup %d ---" % i, timestamp=True)
             self.setup(**params)
             self.run(**params)
             self.teardown(**params)
-            bench_print("--- Warmup %d finished ---" % i, post=1)
+            bench_print("--- Warmup %d finished ---" % i, post=1, timestamp=True)
 
         self.reset()
         for i in range(repeats):
-            bench_print("--- Run %d ---" % i)
+            bench_print("--- Run %d ---" % i, timestamp=True)
             self.setup(**params)
             self.run(**params)
             self.teardown(**params)
-            bench_print("--- Run %d finished ---" % i, post=1)
+            bench_print("--- Run %d finished ---" % i, post=1, timestamp=True)
 
         # Average timings across repeats
         for event in self.timings.keys():
