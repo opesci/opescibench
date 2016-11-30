@@ -307,8 +307,9 @@ class LinePlotter(Plotter):
             else:
                 yvals = self.yvalues
             self.set_yaxis(self.ax, self.ylabel, values=yvals, dtype=self.ytype)
-        self.ax.legend(self.legend, loc='best', ncol=2,
-                       fancybox=True, fontsize=10)
+        if len(self.legend) > 0:
+            self.ax.legend(self.legend, loc='best', ncol=2,
+                           fancybox=True, fontsize=10)
         self.save_figure(self.fig, self.figname)
 
     def add_line(self, xvalues, yvalues, label=None, plt_type='loglog'):
