@@ -318,10 +318,12 @@ class LinePlotter(Plotter):
         :param xvalue: List of X values of the  measurements
         :param label: Optional legend label for data line
         """
-        self.xlim = (min(xvalues + ([self.xlim[0]] if self.xlim else [])),
-                     max(xvalues + ([self.xlim[1]] if self.xlim else [])))
-        self.ylim = (min(yvalues + ([self.ylim[0]] if self.ylim else [])),
-                     max(yvalues + ([self.ylim[1]] if self.ylim else [])))
+        xv_lim = (min(xvalues), max(xvalues))
+        self.xlim = (min(xv_lim[0], self.xlim[0]) if self.xlim else xv_lim[0],
+                     max(xv_lim[1], self.xlim[1]) if self.xlim else xv_lim[1])
+        yv_lim = (min(yvalues), max(yvalues))
+        self.ylim = (min(yv_lim[0], self.ylim[0]) if self.ylim else yv_lim[0],
+                     max(yv_lim[1], self.ylim[1]) if self.ylim else yv_lim[1])
         self.plot(xvalues, yvalues, label=label, linewidth=2,
                   linestyle='solid')
 
