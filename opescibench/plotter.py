@@ -266,6 +266,7 @@ class LinePlotter(Plotter):
 
     def __init__(self, figname='plot', plotdir='plots', title=None,
                  plot_type='loglog', xlabel=None, ylabel=None,
+                 xvalues=None, yvalues=None,
                  xtype=np.int32, ytype=np.int32, xbase=2., ybase=2.):
         super(LinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
@@ -276,6 +277,8 @@ class LinePlotter(Plotter):
         self.ylabel = ylabel or 'Wall time (s)'
         self.xlim = None
         self.ylim = None
+        self.xvalues = xvalues
+        self.yvalues = yvalues
         self.xtype = xtype
         self.ytype = ytype
         self.xbase = xbase
@@ -291,12 +294,18 @@ class LinePlotter(Plotter):
     def __exit__(self, *args):
         # Set axis labelling and generate plot file
         if self.xlim:
-            plttype = 'log' if self.plot_type in ['loglog', 'semilogx'] else 'lines'
-            xvals = scale_limits(self.xlim[0], self.xlim[1], base=self.xbase, type=plttype)
+            if self.xvalues is None:
+                plttype = 'log' if self.plot_type in ['loglog', 'semilogx'] else 'lines'
+                xvals = scale_limits(self.xlim[0], self.xlim[1], base=self.xbase, type=plttype)
+            else:
+                xvals = self.xvalues
             self.set_xaxis(self.ax, self.xlabel, values=xvals, dtype=self.xtype)
         if self.ylim:
-            plttype = 'log' if self.plot_type in ['loglog', 'semilogy'] else 'lines'
-            yvals = scale_limits(self.ylim[0], self.ylim[1], base=self.ybase, type=plttype)
+            if self.yvalues is None:
+                plttype = 'log' if self.plot_type in ['loglog', 'semilogy'] else 'lines'
+                yvals = scale_limits(self.ylim[0], self.ylim[1], base=self.ybase, type=plttype)
+            else:
+                yvals = self.yvalues
             self.set_yaxis(self.ax, self.ylabel, values=yvals, dtype=self.ytype)
         self.ax.legend(self.legend, loc='best', ncol=2,
                        fancybox=True, fontsize=10)
