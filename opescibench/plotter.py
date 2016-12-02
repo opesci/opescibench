@@ -312,13 +312,15 @@ class LinePlotter(Plotter):
                            fancybox=True, fontsize=10)
         self.save_figure(self.fig, self.figname)
 
-    def add_line(self, xvalues, yvalues, label=None, style=None):
+    def add_line(self, xvalues, yvalues, label=None, style=None, annotations=None):
         """Adds a single line to the plot of from a set of measurements
 
         :param yvalue: List of Y values of the  measurements
         :param xvalue: List of X values of the  measurements
         :param label: Optional legend label for data line
         :param style: Plotting style to use, defaults to black line ('-k')
+        :param annotations: Point annotation strings to be place next
+                            to each point on the line.
         """
         style = style or 'k-'
         # Update mai/max values for axis limits
@@ -329,6 +331,12 @@ class LinePlotter(Plotter):
         self.ylim = (min(yv_lim[0], self.ylim[0]) if self.ylim else yv_lim[0],
                      max(yv_lim[1], self.ylim[1]) if self.ylim else yv_lim[1])
         self.plot(xvalues, yvalues, style, label=label, linewidth=2)
+
+        # Add point annotations
+        if annotations:
+            for x, y, a in zip(xvalues, yvalues, annotations):
+                plt.annotate(a, xy=(x, y), xytext=(4, 2),
+                             textcoords='offset points', size=6)
 
         # Record legend labels to avoid replication
         if label is not None:
