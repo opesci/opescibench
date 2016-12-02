@@ -4,10 +4,14 @@ from os import path, makedirs
 from collections import Mapping, namedtuple, defaultdict, OrderedDict
 try:
     import matplotlib as mpl
+    import matplotlib.pyplot as plt
     # The below is needed on certain clusters
     # mpl.use("Agg")
-    import matplotlib.pyplot as plt
     from matplotlib.ticker import FormatStrFormatter
+
+    # Adjust font size
+    font = {'size'   : 10}
+    mpl.rc('font', **font)
 except:
     mpl = None
     plt = None
@@ -19,11 +23,6 @@ from opescibench.utils import bench_print
 
 
 __all__ = ['Plotter', 'LinePlotter', 'RooflinePlotter', 'BarchartPlotter']
-
-
-# Adjust font size
-font = {'size'   : 10}
-mpl.rc('font', **font)
 
 
 def scale_limits(minval, maxval, base, type='log'):
