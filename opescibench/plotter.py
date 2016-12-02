@@ -1,7 +1,7 @@
 import numpy as np
 from math import log, floor, ceil
 from os import path, makedirs
-from collections import Mapping, namedtuple, defaultdict
+from collections import Mapping, namedtuple, defaultdict, OrderedDict
 try:
     import matplotlib as mpl
     # The below is needed on certain clusters
@@ -271,7 +271,7 @@ class LinePlotter(Plotter):
         super(LinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
         self.title = title
-        self.legend = {}
+        self.legend = OrderedDict()
         self.plot_type = plot_type
         self.xlabel = xlabel or 'Number of processors'
         self.ylabel = ylabel or 'Wall time (s)'
@@ -307,26 +307,33 @@ class LinePlotter(Plotter):
             else:
                 yvals = self.yvalues
             self.set_yaxis(self.ax, self.ylabel, values=yvals, dtype=self.ytype)
+        # Add legend if labels were used
         if len(self.legend) > 0:
             self.ax.legend(self.legend, loc='best', ncol=2,
                            fancybox=True, fontsize=10)
         self.save_figure(self.fig, self.figname)
 
-    def add_line(self, xvalues, yvalues, label=None, plt_type='loglog'):
+    def add_line(self, xvalues, yvalues, label=None, style=None):
         """Adds a single line to the plot of from a set of measurements
 
         :param yvalue: List of Y values of the  measurements
         :param xvalue: List of X values of the  measurements
         :param label: Optional legend label for data line
+        :param style: Plotting style to use, defaults to black line ('-k')
         """
+        style = style or 'k-'
+        # Update mai/max values for axis limits
         xv_lim = (min(xvalues), max(xvalues))
         self.xlim = (min(xv_lim[0], self.xlim[0]) if self.xlim else xv_lim[0],
                      max(xv_lim[1], self.xlim[1]) if self.xlim else xv_lim[1])
         yv_lim = (min(yvalues), max(yvalues))
         self.ylim = (min(yv_lim[0], self.ylim[0]) if self.ylim else yv_lim[0],
                      max(yv_lim[1], self.ylim[1]) if self.ylim else yv_lim[1])
-        self.plot(xvalues, yvalues, label=label, linewidth=2,
-                  linestyle='solid')
+        self.plot(xvalues, yvalues, style, label=label, linewidth=2)
+
+        # Record legend labels to avoid replication
+        if label is not None:
+            self.legend[label] = style
 
 
 class BarchartPlotter(Plotter):
