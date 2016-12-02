@@ -294,7 +294,8 @@ class LinePlotter(Plotter):
 
     def __init__(self, figname='plot', plotdir='plots', title=None,
                  plot_type='loglog', xscale=None, yscale=None,
-                 xlabel=None, ylabel=None, legend=None):
+                 xlabel=None, ylabel=None, legend=None,
+                 yscale2=None, ylabel2=None):
         super(LinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
         self.title = title
@@ -306,12 +307,17 @@ class LinePlotter(Plotter):
         self.ylabel = ylabel or 'Wall time (s)'
         self.xscale = xscale or AxisScale(scale='log', base=2.)
         self.yscale = yscale or AxisScale(scale='log', base=2.)
+        self.yscale2 = yscale2
+        self.ylabel2 = ylabel2
 
     def __enter__(self):
         self.fig, self.ax = self.create_figure(self.figname)
         self.plot = getattr(self.ax, self.plot_type)
         if self.title is not None:
             self.ax.set_title(title)
+
+        if self.yscale2:
+            self.ax2 = self.ax.twinx()
         return self
 
     def __exit__(self, *args):
@@ -320,15 +326,24 @@ class LinePlotter(Plotter):
                        dtype=self.xscale.dtype)
         self.set_yaxis(self.ax, self.ylabel, values=self.yscale.values,
                        dtype=self.yscale.dtype)
+        if self.yscale2:
+            self.set_yaxis(self.ax2, self.ylabel2,
+                           values=self.yscale2.values,
+                           dtype=self.yscale2.dtype)
 
         # Add legend if labels were used
         lines, labels = self.ax.get_legend_handles_labels()
+        if self.yscale2:
+            lines2, labels2 = self.ax2.get_legend_handles_labels()
+            lines += lines2
+            labels += labels2
         if len(lines) > 0:
             self.ax.legend(lines, labels, **self.legend)
 
         self.save_figure(self.fig, self.figname)
 
-    def add_line(self, xvalues, yvalues, label=None, style=None, annotations=None):
+    def add_line(self, xvalues, yvalues, label=None, style=None,
+                 annotations=None, secondary=False):
         """Adds a single line to the plot of from a set of measurements
 
         :param yvalue: List of Y values of the  measurements
@@ -342,8 +357,12 @@ class LinePlotter(Plotter):
 
         # Update mai/max values for axis limits
         self.xscale.update_limits(xvalues)
-        self.yscale.update_limits(yvalues)
-        self.plot(xvalues, yvalues, style, label=label, linewidth=2)
+        if secondary:
+            self.yscale2.update_limits(yvalues)
+            self.ax2.semilogx(xvalues, yvalues, style, label=label, linewidth=2)
+        else:
+            self.yscale.update_limits(yvalues)
+            self.plot(xvalues, yvalues, style, label=label, linewidth=2)
 
         # Add point annotations
         if annotations:
