@@ -46,12 +46,13 @@ def scale_limits(minval, maxval, base, type='log'):
 class AxisScale(object):
     """Utility class to describe and configure axis value labelling."""
 
-    def __init__(self, values=None, scale='log', base=2., dtype=np.float32):
+    def __init__(self, values=None, minval=None, maxval=None,
+                 scale='log', base=2., dtype=np.float32):
         self.scale = scale
         self.base = base
         self.dtype = dtype
-        self.min = None
-        self.max = None
+        self.min = minval
+        self.max = maxval
 
         self._values = values
 
@@ -66,8 +67,8 @@ class AxisScale(object):
     def update_limits(self, values):
         """Update the internal min/max limits according to values"""
         limits = (min(values), max(values))
-        self.min = min(limits[0], self.min) if self.min else limits[0]
-        self.max = max(limits[1], self.max) if self.max else limits[1]
+        self.min = limits[0] if self.min is None else min(limits[0], self.min)
+        self.max = limits[1] if self.max is None else max(limits[1], self.max)
 
 
 class Plotter(object):
