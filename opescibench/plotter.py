@@ -22,7 +22,8 @@ except ImportError:
 from opescibench.utils import bench_print
 
 
-__all__ = ['Plotter', 'LinePlotter', 'RooflinePlotter', 'BarchartPlotter']
+__all__ = ['Plotter', 'LinePlotter', 'RooflinePlotter', 'BarchartPlotter',
+           'AxisScale']
 
 
 def scale_limits(minval, maxval, base, type='log'):
@@ -40,6 +41,33 @@ def scale_limits(minval, maxval, base, type='log'):
         return dtype(base) ** basevals
     else:
         return dtype(base) * basevals
+
+
+class AxisScale(object):
+    """Utility class to describe and configure axis value labelling."""
+
+    def __init__(self, values=None, scale='log', base=2., dtype=np.float32):
+        self.scale = scale
+        self.base = base
+        self.dtype = dtype
+        self.min = None
+        self.max = None
+
+        self._values = values
+
+    @property
+    def values(self):
+        """If no values were provided, derive them from recorded limits"""
+        if self._values is None:
+            self._values = scale_limits(minval=self.min, maxval=self.max,
+                                        base=self.base, type=self.scale)
+        return np.array(self._values).astype(self.dtype)
+
+    def update_limits(self, values):
+        """Update the internal min/max limits according to values"""
+        limits = (min(values), max(values))
+        self.min = min(limits[0], self.min) if self.min else limits[0]
+        self.max = max(limits[1], self.max) if self.max else limits[1]
 
 
 class Plotter(object):
@@ -264,9 +292,8 @@ class LinePlotter(Plotter):
     """
 
     def __init__(self, figname='plot', plotdir='plots', title=None,
-                 plot_type='loglog', xlabel=None, ylabel=None,
-                 legend=None, xvalues=None, yvalues=None,
-                 xtype=np.int32, ytype=np.int32, xbase=2., ybase=2.):
+                 plot_type='loglog', xscale=None, yscale=None,
+                 xlabel=None, ylabel=None, legend=None):
         super(LinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
         self.title = title
@@ -277,14 +304,8 @@ class LinePlotter(Plotter):
         self.plot_type = plot_type
         self.xlabel = xlabel or 'Number of processors'
         self.ylabel = ylabel or 'Wall time (s)'
-        self.xlim = None
-        self.ylim = None
-        self.xvalues = xvalues
-        self.yvalues = yvalues
-        self.xtype = xtype
-        self.ytype = ytype
-        self.xbase = xbase
-        self.ybase = ybase
+        self.xscale = xscale or AxisScale(scale='log', base=2.)
+        self.yscale = yscale or AxisScale(scale='log', base=2.)
 
     def __enter__(self):
         self.fig, self.ax = self.create_figure(self.figname)
@@ -295,23 +316,15 @@ class LinePlotter(Plotter):
 
     def __exit__(self, *args):
         # Set axis labelling and generate plot file
-        if self.xlim:
-            if self.xvalues is None:
-                plttype = 'log' if self.plot_type in ['loglog', 'semilogx'] else 'lines'
-                xvals = scale_limits(self.xlim[0], self.xlim[1], base=self.xbase, type=plttype)
-            else:
-                xvals = self.xvalues
-            self.set_xaxis(self.ax, self.xlabel, values=xvals, dtype=self.xtype)
-        if self.ylim:
-            if self.yvalues is None:
-                plttype = 'log' if self.plot_type in ['loglog', 'semilogy'] else 'lines'
-                yvals = scale_limits(self.ylim[0], self.ylim[1], base=self.ybase, type=plttype)
-            else:
-                yvals = self.yvalues
-            self.set_yaxis(self.ax, self.ylabel, values=yvals, dtype=self.ytype)
+        self.set_xaxis(self.ax, self.xlabel, values=self.xscale.values,
+                       dtype=self.xscale.dtype)
+        self.set_yaxis(self.ax, self.ylabel, values=self.yscale.values,
+                       dtype=self.yscale.dtype)
+
         # Add legend if labels were used
         if len(self.legend_map) > 0:
             self.ax.legend(**self.legend)
+
         self.save_figure(self.fig, self.figname)
 
     def add_line(self, xvalues, yvalues, label=None, style=None, annotations=None):
@@ -325,13 +338,10 @@ class LinePlotter(Plotter):
                             to each point on the line.
         """
         style = style or 'k-'
+
         # Update mai/max values for axis limits
-        xv_lim = (min(xvalues), max(xvalues))
-        self.xlim = (min(xv_lim[0], self.xlim[0]) if self.xlim else xv_lim[0],
-                     max(xv_lim[1], self.xlim[1]) if self.xlim else xv_lim[1])
-        yv_lim = (min(yvalues), max(yvalues))
-        self.ylim = (min(yv_lim[0], self.ylim[0]) if self.ylim else yv_lim[0],
-                     max(yv_lim[1], self.ylim[1]) if self.ylim else yv_lim[1])
+        self.xscale.update_limits(xvalues)
+        self.yscale.update_limits(yvalues)
         self.plot(xvalues, yvalues, style, label=label, linewidth=2)
 
         # Add point annotations
