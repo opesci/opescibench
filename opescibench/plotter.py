@@ -265,12 +265,15 @@ class LinePlotter(Plotter):
 
     def __init__(self, figname='plot', plotdir='plots', title=None,
                  plot_type='loglog', xlabel=None, ylabel=None,
-                 xvalues=None, yvalues=None,
+                 legend=None, xvalues=None, yvalues=None,
                  xtype=np.int32, ytype=np.int32, xbase=2., ybase=2.):
         super(LinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
         self.title = title
-        self.legend = OrderedDict()
+        self.legend = {'loc': 'best', 'ncol': 2,
+                       'fancybox': True, 'fontsize': 10}
+        self.legend.update(legend or {})  # Add user arguments to defaults
+        self.legend_map = OrderedDict()  # Label->style map for legend entries
         self.plot_type = plot_type
         self.xlabel = xlabel or 'Number of processors'
         self.ylabel = ylabel or 'Wall time (s)'
@@ -307,9 +310,8 @@ class LinePlotter(Plotter):
                 yvals = self.yvalues
             self.set_yaxis(self.ax, self.ylabel, values=yvals, dtype=self.ytype)
         # Add legend if labels were used
-        if len(self.legend) > 0:
-            self.ax.legend(self.legend, loc='best', ncol=2,
-                           fancybox=True, fontsize=10)
+        if len(self.legend_map) > 0:
+            self.ax.legend(**self.legend)
         self.save_figure(self.fig, self.figname)
 
     def add_line(self, xvalues, yvalues, label=None, style=None, annotations=None):
@@ -340,7 +342,7 @@ class LinePlotter(Plotter):
 
         # Record legend labels to avoid replication
         if label is not None:
-            self.legend[label] = style
+            self.legend_map[label] = style
 
 
 class BarchartPlotter(Plotter):
