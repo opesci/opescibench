@@ -301,7 +301,6 @@ class LinePlotter(Plotter):
         self.legend = {'loc': 'best', 'ncol': 2,
                        'fancybox': True, 'fontsize': 10}
         self.legend.update(legend or {})  # Add user arguments to defaults
-        self.legend_map = OrderedDict()  # Label->style map for legend entries
         self.plot_type = plot_type
         self.xlabel = xlabel or 'Number of processors'
         self.ylabel = ylabel or 'Wall time (s)'
@@ -323,8 +322,9 @@ class LinePlotter(Plotter):
                        dtype=self.yscale.dtype)
 
         # Add legend if labels were used
-        if len(self.legend_map) > 0:
-            self.ax.legend(**self.legend)
+        lines, labels = self.ax.get_legend_handles_labels()
+        if len(lines) > 0:
+            self.ax.legend(lines, labels, **self.legend)
 
         self.save_figure(self.fig, self.figname)
 
@@ -350,10 +350,6 @@ class LinePlotter(Plotter):
             for x, y, a in zip(xvalues, yvalues, annotations):
                 plt.annotate(a, xy=(x, y), xytext=(4, 2),
                              textcoords='offset points', size=6)
-
-        # Record legend labels to avoid replication
-        if label is not None:
-            self.legend_map[label] = style
 
 
 class BarchartPlotter(Plotter):
