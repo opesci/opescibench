@@ -280,7 +280,7 @@ class RooflinePlotter(Plotter):
     def __enter__(self):
         self.fig, self.ax = self.create_figure(self.figname)
         if self.title is not None:
-            self.ax.set_title(title)
+            self.ax.set_title(self.title)
         return self
 
     def __exit__(self, *args):
