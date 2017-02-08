@@ -45,6 +45,8 @@ class Plotter(object):
     marker = ['D', 'o', '^', 'v']
     color = ['r', 'b', 'g', 'y']
 
+    fonts = {'title': 8, 'axis': 8, 'legend': 7}
+
     def __init__(self, plotdir='plots'):
         if mpl is None or plt is None:
             bench_print("Matplotlib/PyPlot not found - unable to plot.")
@@ -61,16 +63,16 @@ class Plotter(object):
             values = np.array(values).astype(dtype)
             axis.set_xlim(values[0], values[-1])
             axis.set_xticks(values)
-            axis.set_xticklabels(values)
-        axis.set_xlabel(label)
+            axis.set_xticklabels(values, fontsize=self.fonts['axis'])
+        axis.set_xlabel(label, fontsize=self.fonts['axis'])
 
     def set_yaxis(self, axis, label, values=None, dtype=np.float32):
         if values is not None:
             values = np.array(values).astype(dtype)
             axis.set_ylim(values[0], values[-1])
             axis.set_yticks(values)
-            axis.set_yticklabels(values)
-        axis.set_ylabel(label)
+            axis.set_yticklabels(values, fontsize=self.fonts['axis'])
+        axis.set_ylabel(label, fontsize=self.fonts['axis'])
 
     def save_figure(self, figure, figname):
         if not path.exists(self.plotdir):
@@ -103,7 +105,7 @@ class Plotter(object):
 
         # Add legend if labels were used
         if isinstance(nprocs, Mapping):
-            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
+            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=self.fonts['legend'])
         self.set_xaxis(ax, xlabel, values=nprocs, dtype=np.int32)
         self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
         return self.save_figure(fig, figname) if save else fig, ax
@@ -123,7 +125,7 @@ class Plotter(object):
 
         # Add legend if labels were used
         if isinstance(nprocs, Mapping):
-            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
+            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=self.fonts['legend'])
         self.set_xaxis(ax, xlabel, values=nprocs)
         yvals = np.linspace(0., 1.2, 7)
         self.set_xaxis(ax, xlabel, values=nprocs)
@@ -160,7 +162,7 @@ class Plotter(object):
             ymax = max(time)
 
         if isinstance(error, Mapping):
-            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
+            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=self.fonts['legend'])
         self.set_xaxis(ax, xlabel)
         self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
         return self.save_figure(fig, figname) if save else fig, ax
@@ -232,7 +234,7 @@ class Plotter(object):
 
         # Add legend if labels were used
         if isinstance(mode, Mapping):
-            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=10)
+            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=self.fonts['legend'])
         ax.set_xticks(offsets + .5)
         ax.set_xticklabels(mode)
         self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
@@ -265,8 +267,7 @@ class RooflinePlotter(Plotter):
         super(RooflinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
         self.title = title
-        self.legend = {'loc': 'best', 'ncol': 2,
-                       'fancybox': True, 'fontsize': 10}
+        self.legend = {'loc': 'best', 'ncol': 2, 'fancybox': True, 'fontsize': 10}
         self.legend.update(legend)  # Add user arguments to defaults
         self.legend_map = {}  # Label -> style map for legend entries
 
@@ -280,7 +281,7 @@ class RooflinePlotter(Plotter):
     def __enter__(self):
         self.fig, self.ax = self.create_figure(self.figname)
         if self.title is not None:
-            self.ax.set_title(self.title)
+            self.ax.set_title(self.title, {'fontsize': self.fonts['title']})
         return self
 
     def __exit__(self, *args):
