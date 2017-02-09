@@ -7,6 +7,7 @@ try:
     # The below is needed on certain clusters
     # mpl.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import FormatStrFormatter
 except:
     mpl = None
     plt = None
@@ -45,7 +46,7 @@ class Plotter(object):
     marker = ['D', 'o', '^', 'v']
     color = ['r', 'b', 'g', 'y']
 
-    fonts = {'title': 8, 'axis': 8, 'legend': 7}
+    fonts = {'title': 8, 'axis': 8, 'minorticks': 3, 'legend': 7}
 
     def __init__(self, plotdir='plots'):
         if mpl is None or plt is None:
@@ -307,6 +308,13 @@ class RooflinePlotter(Plotter):
         self.set_yaxis(self.ax, ylabel, values=self.yvals, dtype=np.int32)
         self.ax.legend(**self.legend)
         self.save_figure(self.fig, self.figname)
+
+    def set_yaxis(self, axis, label, values=None, dtype=np.float32):
+        super(RooflinePlotter, self).set_yaxis(axis, label, values, dtype=np.float32)
+        if values is not None:
+            axis.tick_params(axis='y', which='minor', labelsize=self.fonts['minorticks'])
+            axis.yaxis.set_major_formatter(FormatStrFormatter("%d"))
+            axis.yaxis.set_minor_formatter(FormatStrFormatter("%d"))
 
     def add_point(self, gflops, oi, style=None, label=None, annotate=None,
                   oi_line=True, oi_annotate=None):
