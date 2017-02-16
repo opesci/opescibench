@@ -317,7 +317,7 @@ class RooflinePlotter(Plotter):
             axis.yaxis.set_minor_formatter(FormatStrFormatter("%d"))
 
     def add_point(self, gflops, oi, style=None, label=None, annotate=None,
-                  oi_line=True, oi_annotate=None):
+                  oi_line=True, perf_annotate=None, oi_annotate=None):
         """Adds a single point measurement to the roofline plot
 
         :param gflops: Achieved performance in GFlops/s (y axis value)
@@ -326,16 +326,19 @@ class RooflinePlotter(Plotter):
         :param label: Optional legend label for point data
         :param annotate: Optional text to print next to point
         :param oi_line: Draw a vertical dotted line for the OI value
+        :param perf_annotate: Optional text showing the performance achieved
+                              relative to the peak
         :param oi_annotate: Optional text or options dict to add an annotation
                             to the vertical OI line
         """
         self.xvals += [oi]
         self.yvals += [gflops]
 
+        oi_top = min(oi * self.max_bw, self.max_flops)
+
         # Add dotted OI line and annotate
         if oi_line:
-            oi_top = min(oi * self.max_bw, self.max_flops)
-            self.ax.plot([oi, oi], [1., oi_top], 'k:')
+            self.ax.plot([oi, oi], [1., oi_top], ls=':', lw=0.3, c='black')
             if oi_annotate is not None:
                 oi_ann = {'xy': (oi, 0.12), 'size': 8, 'rotation': -90,
                           'xycoords': ('data', 'axes fraction')}
@@ -344,6 +347,13 @@ class RooflinePlotter(Plotter):
                 else:
                     oi_ann['s'] = oi_annotate
                 plt.annotate(**oi_ann)
+
+        # Add dotted gflops line
+        if perf_annotate:
+            perf_ann = {'xy': (oi, oi_top), 'size': 5,
+                        'textcoords': 'offset points', 'xytext': (-9, 4),
+                        's': "%d%%" % (float("%.2f" % (gflops/oi_top))*100)}
+            plt.annotate(**perf_ann)
 
         # Plot and annotate the data point
         style = style or 'k%s' % self.marker[0]
