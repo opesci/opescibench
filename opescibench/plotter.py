@@ -46,29 +46,22 @@ def scale_limits(minval, maxval, base, type='log'):
 class AxisScale(object):
     """Utility class to describe and configure axis value labelling."""
 
-    def __init__(self, values=None, minval=None, maxval=None,
-                 scale='log', base=2., dtype=np.float32):
+    def __init__(self, scale='log', base=2., dtype=np.float32,
+                 minval=None, maxval=None):
         self.scale = scale
         self.base = base
         self.dtype = dtype
-        self.min = minval
-        self.max = maxval
+        self.minval = minval
+        self.maxval = maxval
 
-        self._values = values
+        self._values = []
 
     @property
     def values(self):
-        """If no values were provided, derive them from recorded limits"""
-        if self._values is None:
-            self._values = scale_limits(minval=self.min, maxval=self.max,
-                                        base=self.base, type=self.scale)
-        return np.array(self._values).astype(self.dtype)
-
-    def update_limits(self, values):
-        """Update the internal min/max limits according to values"""
-        limits = (min(values), max(values))
-        self.min = limits[0] if self.min is None else min(limits[0], self.min)
-        self.max = limits[1] if self.max is None else max(limits[1], self.max)
+        minv, maxv = min(self._values), max(self._values)
+        minv = minv if self.minval is None else min(minv, self.minval)
+        maxv = maxv if self.maxval is None else max(maxv, self.maxval)
+        return scale_limits(minval=minv, maxval=maxv, base=self.base, type=self.scale)
 
 
 class Plotter(object):
@@ -356,12 +349,12 @@ class LinePlotter(Plotter):
         style = style or 'k-'
 
         # Update mai/max values for axis limits
-        self.xscale.update_limits(xvalues)
+        self.xscale._values += xvalues
         if secondary:
-            self.yscale2.update_limits(yvalues)
+            self.yscale2._values += yvalues
             self.ax2.semilogx(xvalues, yvalues, style, label=label, linewidth=2)
         else:
-            self.yscale.update_limits(yvalues)
+            self.yscale._values += yvalues
             self.plot(xvalues, yvalues, style, label=label, linewidth=2)
 
         # Add point annotations
