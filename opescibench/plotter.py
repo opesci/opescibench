@@ -1,7 +1,7 @@
 import numpy as np
 from math import log, floor, ceil
 from os import path, makedirs
-from collections import Mapping
+from collections import Mapping, namedtuple
 try:
     import matplotlib as mpl
     # The below is needed on certain clusters
@@ -11,6 +11,11 @@ try:
 except:
     mpl = None
     plt = None
+try:
+    import brewer2mpl as b2m
+except ImportError:
+    b2m = None
+from opescibench.utils import bench_print
 
 
 __all__ = ['Plotter', 'RooflinePlotter']
@@ -44,9 +49,13 @@ class Plotter(object):
     figsize = (6, 4)
     dpi = 300
     marker = ['D', 'o', '^', 'v']
-    color = ['r', 'b', 'g', 'y']
 
-    fonts = {'title': 8, 'axis': 8, 'minorticks': 3, 'legend': 7}
+    if b2m is not None:
+        color = b2m.get_map('Set2', 'qualitative', 6).hex_colors
+    else:
+        color = ['r', 'b', 'g', 'y']
+
+    fonts = {'title': 7, 'axis': 8, 'minorticks': 3, 'legend': 7}
 
     def __init__(self, plotdir='plots'):
         if mpl is None or plt is None:
@@ -79,7 +88,7 @@ class Plotter(object):
         if not path.exists(self.plotdir):
             makedirs(self.plotdir)
         figpath = path.join(self.plotdir, figname)
-        print "Plotting %s " % figpath
+        bench_print("Plotting %s " % figpath)
         figure.savefig(figpath, format='pdf', facecolor='white',
                        orientation='landscape', bbox_inches='tight')
 
@@ -252,6 +261,10 @@ class RooflinePlotter(Plotter):
                     This defines the slope of the roofline.
     :params max_flops: Maximum achievable performance in GFlops/s.
                        This defines the roof of the roofline.
+    :params with_yminorticks: Show minor ticks on yaxis.
+    :params fancycolors: Use beautiful colors, using the user-provided
+                         colors as key to establish a 1-to-1 mapping
+                         between user-provided colors and the new ones.
     :params legend: Additional arguments for legend entries, default:
                     {loc='best', ncol=2, fancybox=True, fontsize=10}
 
@@ -264,7 +277,8 @@ class RooflinePlotter(Plotter):
     """
 
     def __init__(self, figname='roofline', plotdir='plots', title=None,
-                 max_bw=None, max_flops=None, legend=None):
+                 max_bw=None, max_flops=None, with_yminorticks=False,
+                 fancycolor=False, legend=None):
         super(RooflinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
         self.title = title
@@ -276,6 +290,12 @@ class RooflinePlotter(Plotter):
         self.max_flops = max_flops
         self.xvals = [float(max_flops) / max_bw]
         self.yvals = [max_flops]
+        self.with_yminorticks = with_yminorticks
+        if fancycolor is True:
+            self.fancycolor = ColorTracker({}, list(self.color))
+        else:
+            self.fancycolor = None
+
         # A set of OI values for which to add dotted lines
         self.oi_lines = []
 
@@ -312,20 +332,39 @@ class RooflinePlotter(Plotter):
     def set_yaxis(self, axis, label, values=None, dtype=np.float32):
         super(RooflinePlotter, self).set_yaxis(axis, label, values, dtype=np.float32)
         if values is not None:
-            axis.tick_params(axis='y', which='minor', labelsize=self.fonts['minorticks'])
             axis.yaxis.set_major_formatter(FormatStrFormatter("%d"))
-            axis.yaxis.set_minor_formatter(FormatStrFormatter("%d"))
+            if self.with_yminorticks is True:
+                axis.tick_params(axis='y', which='minor', labelsize=self.fonts['minorticks'])
+                axis.yaxis.set_minor_formatter(FormatStrFormatter("%d"))
+            else:
+                axis.minorticks_off()
 
-    def add_point(self, gflops, oi, style=None, label=None, annotate=None,
-                  oi_line=True, perf_annotate=None, oi_annotate=None):
+    def _select_point_color(self, usercolor):
+        if usercolor is None:
+            return self.color[0]
+        elif not self.fancycolor:
+            return usercolor
+        elif usercolor not in self.fancycolor.mapper:
+            try:
+                fancycolor = self.fancycolor.available.pop(0)
+                self.fancycolor.mapper[usercolor] = fancycolor
+            except IndexError:
+                bench_print("No more fancycolor available")
+            return fancycolor
+        else:
+            return self.fancycolor.mapper[usercolor]
+
+    def add_point(self, gflops, oi, marker=None, color=None, label=None, oi_line=True,
+                  point_annotate=None, perf_annotate=None, oi_annotate=None):
         """Adds a single point measurement to the roofline plot
 
         :param gflops: Achieved performance in GFlops/s (y axis value)
         :param oi: Operational intensity in Flops/Byte (x axis value)
-        :param style: Optional plotting style for point data
+        :param marker: Optional plotting marker for point data
+        :param color: Optional plotting color for point data
         :param label: Optional legend label for point data
-        :param annotate: Optional text to print next to point
         :param oi_line: Draw a vertical dotted line for the OI value
+        :param point_annotate: Optional text to print next to point
         :param perf_annotate: Optional text showing the performance achieved
                               relative to the peak
         :param oi_annotate: Optional text or options dict to add an annotation
@@ -349,25 +388,30 @@ class RooflinePlotter(Plotter):
                 plt.annotate(**oi_ann)
 
         # Add dotted gflops line
-        if perf_annotate:
-            perf_ann = {'xy': (oi, oi_top), 'size': 5,
-                        'textcoords': 'offset points', 'xytext': (-9, 4),
-                        's': "%d%%" % (float("%.2f" % (gflops/oi_top))*100)}
+        if perf_annotate is not None:
+            perf_ann = {'xy': (oi, oi_top), 'size': 5, 'textcoords': 'offset points',
+                        'xytext': (-9, 4), 's': "%d%%" % (float("%.2f" % (gflops/oi_top))*100)}
+            if isinstance(perf_annotate, Mapping):
+                perf_ann.update(perf_annotate)
             plt.annotate(**perf_ann)
 
         # Plot and annotate the data point
-        style = style or 'k%s' % self.marker[0]
-        self.ax.plot(oi, gflops, style,
-                       label=label if label not in self.legend_map else None)
-        if annotate is not None:
+        marker = marker or self.marker[0]
+        self.ax.plot(oi, gflops, marker=marker, color=self._select_point_color(color),
+                     label=label if label not in self.legend_map else None)
+        if point_annotate is not None:
             p_ann = {'xy': (oi, gflops), 'size': 8, 'rotation': -45,
-                     'xytext': (2, -13), 'textcoords': 'offset points'}
-            if isinstance(annotate, Mapping):
-                p_ann.update(annotate)
+                     'xytext': (2, -13), 'textcoords': 'offset points',
+                     'bbox': {'facecolor': 'w', 'edgecolor': 'none', 'pad': 1.0}}
+            if isinstance(point_annotate, Mapping):
+                p_ann.update(point_annotate)
             else:
-                p_ann['s'] = annotate
+                p_ann['s'] = point_annotate
             plt.annotate(**p_ann)
 
         # Record legend labels to avoid replication
         if label is not None:
-            self.legend_map[label] = style
+            self.legend_map[label] = '%s%s' % (marker, color)
+
+
+ColorTracker = namedtuple('ColorTracker', 'mapper available')
