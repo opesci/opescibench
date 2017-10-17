@@ -20,6 +20,11 @@ class Executor(object):
         """ Global post-processing method to collect meta-data. """
         pass
 
+    def reset(self):
+        """Reset the data dictionaries"""
+        self.meta = {}
+        self.timings = defaultdict(lambda: defaultdict(float))
+
     def run(self, **kwargs):
         """ This methods needs to be overridden byt the user. """
         raise NotImplementedError("No custom executor function specified")
@@ -39,21 +44,22 @@ class Executor(object):
         Execute a single benchmark repeatedly, including
         setup, teardown and postprocessing methods.
         """
-        # Reset the data dicts
-        self.meta = {}
-        self.timings = defaultdict(lambda: defaultdict(float))
 
-        for _ in range(warmups):
+        self.reset()
+        for i in range(warmups):
+            bench_print("--- Warmup %d ---" % i, timestamp=True)
             self.setup(**params)
             self.run(**params)
             self.teardown(**params)
+            bench_print("--- Warmup %d finished ---" % i, post=1, timestamp=True)
 
+        self.reset()
         for i in range(repeats):
-            bench_print("--- Run %d ---" % i)
+            bench_print("--- Run %d ---" % i, timestamp=True)
             self.setup(**params)
             self.run(**params)
             self.teardown(**params)
-            bench_print("--- Run %d finished ---" % i, post=1)
+            bench_print("--- Run %d finished ---" % i, post=1, timestamp=True)
 
         # Average timings across repeats
         for event in self.timings.keys():

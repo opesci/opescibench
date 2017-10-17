@@ -1,13 +1,17 @@
 import numpy as np
 from math import log, floor, ceil
 from os import path, makedirs
-from collections import Mapping, namedtuple
+from collections import Mapping, namedtuple, defaultdict, OrderedDict
 try:
     import matplotlib as mpl
+    import matplotlib.pyplot as plt
     # The below is needed on certain clusters
     # mpl.use("Agg")
-    import matplotlib.pyplot as plt
     from matplotlib.ticker import FormatStrFormatter
+
+    # Adjust font size
+    font = {'size'   : 10}
+    mpl.rc('font', **font)
 except:
     mpl = None
     plt = None
@@ -18,12 +22,8 @@ except ImportError:
 from opescibench.utils import bench_print
 
 
-__all__ = ['Plotter', 'RooflinePlotter']
-
-
-# Adjust font size
-font = {'size'   : 10}
-mpl.rc('font', **font)
+__all__ = ['Plotter', 'LinePlotter', 'RooflinePlotter', 'BarchartPlotter',
+           'AxisScale']
 
 
 def scale_limits(minval, maxval, base, type='log'):
@@ -41,6 +41,27 @@ def scale_limits(minval, maxval, base, type='log'):
         return dtype(base) ** basevals
     else:
         return dtype(base) * basevals
+
+
+class AxisScale(object):
+    """Utility class to describe and configure axis value labelling."""
+
+    def __init__(self, scale='log', base=2., dtype=np.float32,
+                 minval=None, maxval=None):
+        self.scale = scale
+        self.base = base
+        self.dtype = dtype
+        self.minval = minval
+        self.maxval = maxval
+
+        self._values = []
+
+    @property
+    def values(self):
+        minv, maxv = min(self._values), max(self._values)
+        minv = minv if self.minval is None else min(minv, self.minval)
+        maxv = maxv if self.maxval is None else max(maxv, self.maxval)
+        return scale_limits(minval=minv, maxval=maxv, base=self.base, type=self.scale)
 
 
 class Plotter(object):
@@ -92,163 +113,150 @@ class Plotter(object):
         figure.savefig(figpath, format='pdf', facecolor='white',
                        orientation='landscape', bbox_inches='tight')
 
-    def plot_strong_scaling(self, figname, nprocs, time, save=True,
-                            xlabel='Number of processors', ylabel='Wall time (s)'):
-        """ Plot a strong scaling diagram and according parallel efficiency.
 
-        :param nprocs: List of processor counts or a dict mapping labels to processors
-        :param time: List of timings or a dict mapping labels to timings
-        """
-        assert(isinstance(nprocs, Mapping) == isinstance(time, Mapping))
-        fig, ax = self.create_figure(figname)
+class LinePlotter(Plotter):
+    """Line plotter for generating scaling or error-cost plots
 
-        if isinstance(nprocs, Mapping):
-            for i, label in enumerate(nprocs.keys()):
-                ax.loglog(nprocs[label], time[label], label=label,
-                          linewidth=2, linestyle='solid', marker=self.marker[i])
-            ymin = min([min(t) for t in time.values() if len(t) > 0])
-            ymax = max([max(t) for t in time.values() if len(t) > 0])
-        else:
-            ax.loglog(nprocs, time, linewidth=2, linestyle='solid', marker=self.marker[0])
-            ymin = min(time)
-            ymax = max(time)
+    :params figname: Name of output file
+    :params plotdir: Directory to store the plot in
+    :params title: Plot title to be printed on top
 
-        # Add legend if labels were used
-        if isinstance(nprocs, Mapping):
-            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=self.fonts['legend'])
-        self.set_xaxis(ax, xlabel, values=nprocs, dtype=np.int32)
-        self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
-        return self.save_figure(fig, figname) if save else fig, ax
+    Example usage:
 
-    def plot_efficiency(self, figname, nprocs, time, save=True,
-                        xlabel='Number of processors', ylabel='Parallel efficiency'):
-        assert(isinstance(nprocs, Mapping) == isinstance(time, Mapping))
-        fig, ax = self.create_figure(figname)
+    with LinePlotter(figname=..., plotdir=...) as plot:
+        plot.add_line(y_values, x_values, label='Strong scaling')
+    """
 
-        if isinstance(nprocs, Mapping):
-            for i, label in enumerate(nprocs.keys()):
-                ax.loglog(nprocs[label], time[label] / time[label][0], label=label,
-                          linewidth=2, linestyle='solid', marker=self.marker[i])
-        else:
-            ax.semilogx(nprocs, (time[0] /time) / nprocs, linewidth=2,
-                        linestyle='solid', marker=self.marker[0])
+    def __init__(self, figname='plot', plotdir='plots', title=None,
+                 plot_type='loglog', xscale=None, yscale=None,
+                 xlabel=None, ylabel=None, legend=None,
+                 yscale2=None, ylabel2=None):
+        super(LinePlotter, self).__init__(plotdir=plotdir)
+        self.figname = figname
+        self.title = title
+        self.legend = {'loc': 'best', 'ncol': 2,
+                       'fancybox': True, 'fontsize': 10}
+        self.legend.update(legend or {})  # Add user arguments to defaults
+        self.plot_type = plot_type
+        self.xlabel = xlabel or 'Number of processors'
+        self.ylabel = ylabel or 'Wall time (s)'
+        self.xscale = xscale or AxisScale(scale='log', base=2.)
+        self.yscale = yscale or AxisScale(scale='log', base=2.)
+        self.yscale2 = yscale2
+        self.ylabel2 = ylabel2
 
-        # Add legend if labels were used
-        if isinstance(nprocs, Mapping):
-            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=self.fonts['legend'])
-        self.set_xaxis(ax, xlabel, values=nprocs)
-        yvals = np.linspace(0., 1.2, 7)
-        self.set_xaxis(ax, xlabel, values=nprocs)
-        self.set_yaxis(ax, ylabel, values=yvals)
-        return self.save_figure(fig, figname) if save else fig, ax
+    def __enter__(self):
+        self.fig, self.ax = self.create_figure(self.figname)
+        self.plot = getattr(self.ax, self.plot_type)
+        if self.title is not None:
+            self.ax.set_title(title)
 
-    def plot_error_cost(self, figname, error, time, annotations=None, save=True,
-                        xlabel='Error in L2 norm', ylabel='Wall time (s)'):
-        """ Plot an error cost diagram for the given error and time data.
+        if self.yscale2:
+            self.ax2 = self.ax.twinx()
+        return self
 
-        :param figname: Name of output file
-        :param error: List of error values or a dict mapping labels to values lists
-        :param time: List of time measurements or a dict mapping labels to values lists
-        :param annotations: Optional list of point annotations
-        :param save: Whether to save the plot; if False a tuple (fig, axis) is returned
-        """
-        assert(isinstance(error, Mapping) == isinstance(time, Mapping))
-        fig, ax = self.create_figure(figname)
-
-        if isinstance(error, Mapping):
-            for i, label in enumerate(error.keys()):
-                ax.loglog(error[label], time[label], label=label,
-                          linewidth=2, linestyle='solid', marker=self.marker[i])
-            if annotations is not None:
-                for label in annotations:
-                    for x, y, a in zip(error[label], time[label], annotations[label]):
-                        plt.annotate(a, xy=(x, y), xytext=(4, 2),
-                                     textcoords='offset points', size=8)
-            ymin = min([min(t) for t in time.values()])
-            ymax = max([max(t) for t in time.values()])
-        else:
-            ax.loglog(error, time, linewidth=2, linestyle='solid', marker=self.marker[0])
-            ymin = min(time)
-            ymax = max(time)
-
-        if isinstance(error, Mapping):
-            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=self.fonts['legend'])
-        self.set_xaxis(ax, xlabel)
-        self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
-        return self.save_figure(fig, figname) if save else fig, ax
-
-    def plot_roofline(self, figname, flopss, intensity, max_bw=None, max_flops=None,
-                      save=True, xlabel='Operational intensity (Flops/Byte)',
-                      ylabel='Performance (GFlops/s)', title=None):
-        """ Plot performance on a roofline graph with given limits.
-
-        :param figname: Name of output file
-        :param flopss: Dict of labels to flop rates (GFlops/s)
-        :param intensity: Dict of labels to operational intensity values (Flops/B)
-        :param max_bw: Maximum achievable memory bandwidth (GB/s); determines roofline slope
-        :param max_flops: Maximum achievable flop rate (GFlops/s); determines roof of the diagram
-        :param save: Whether to save the plot; if False a tuple (fig, axis) is returned
-        """
-        assert(isinstance(flopss, Mapping) and isinstance(intensity, Mapping))
-        fig, ax = self.create_figure(figname)
-        if title is not None:
-            ax.set_title(title)
-
-        assert(max_bw is not None and max_flops is not None)
-
-        # Derive axis values for flops rate and operational intensity
-        xmax = max(intensity.values() + [float(max_flops) / max_bw])
-        ymax = max(flopss.values() + [max_flops])
-        xvals = scale_limits(min(intensity.values()), xmax, base=2., type='log')
-        yvals = scale_limits(min(flopss.values()), ymax, base=2., type='log')
-
-        # Create the roofline
-        roofline = xvals * max_bw
-        roofline[roofline > max_flops] = max_flops
-        idx = (roofline >= max_flops).argmax()
-        x_roofl = np.insert(xvals, idx, max_flops / max_bw)
-        roofline = np.insert(roofline, idx, max_flops)
-        ax.loglog(x_roofl, roofline, 'k-')
-
-        # Insert roofline points
-        for label in flopss.keys():
-            oi = intensity[label]
-            ax.loglog(oi, flopss[label], 'k%s' % self.marker[0])
-            ax.plot([oi, oi], [yvals[0], min(oi * max_bw, max_flops)], 'k:')
-            plt.annotate(label, xy=(oi, flopss[label]), xytext=(2, -13),
-                         rotation=-45, textcoords='offset points', size=8)
-        self.set_xaxis(ax, xlabel, values=xvals, dtype=np.int32)
-        self.set_yaxis(ax, ylabel, values=yvals, dtype=np.int32)
-        # Convert MFlops to GFlops in plot
-        return self.save_figure(fig, figname) if save else fig, ax
-
-
-    def plot_comparison(self, figname, mode, time, save=True,
-                            xlabel='Execution mode', ylabel='Wall time (s)'):
-        """Plot bar chart comparison between different execution modes.
-
-        :param mode: List of modes or a dict mapping labels to processors
-        :param time: List of timings or a dict mapping labels to timings
-        """
-        assert(isinstance(mode, Mapping) == isinstance(time, Mapping))
-        fig, ax = self.create_figure(figname)
-        offsets = np.arange(len(mode))
-        width = 0.8
-
-        if isinstance(mode, Mapping):
-            raise NotImplementedError('Custom labels not yet supported for bar chart comparison')
-        else:
-            ax.bar(offsets + .1, time, width)
-            ymin = min(time)
-            ymax = max(time)
+    def __exit__(self, *args):
+        # Set axis labelling and generate plot file
+        self.set_xaxis(self.ax, self.xlabel, values=self.xscale.values,
+                       dtype=self.xscale.dtype)
+        self.set_yaxis(self.ax, self.ylabel, values=self.yscale.values,
+                       dtype=self.yscale.dtype)
+        if self.yscale2:
+            self.set_yaxis(self.ax2, self.ylabel2,
+                           values=self.yscale2.values,
+                           dtype=self.yscale2.dtype)
 
         # Add legend if labels were used
-        if isinstance(mode, Mapping):
-            ax.legend(loc='best', ncol=4, fancybox=True, fontsize=self.fonts['legend'])
-        ax.set_xticks(offsets + .5)
-        ax.set_xticklabels(mode)
-        self.set_yaxis(ax, ylabel, values=scale_limits(ymin, ymax, type='log', base=2.))
-        return self.save_figure(fig, figname) if save else fig, ax
+        lines, labels = self.ax.get_legend_handles_labels()
+        if self.yscale2:
+            lines2, labels2 = self.ax2.get_legend_handles_labels()
+            lines += lines2
+            labels += labels2
+        if len(lines) > 0:
+            self.ax.legend(lines, labels, **self.legend)
+
+        self.save_figure(self.fig, self.figname)
+
+    def add_line(self, xvalues, yvalues, label=None, style=None,
+                 annotations=None, secondary=False):
+        """Adds a single line to the plot of from a set of measurements
+
+        :param yvalue: List of Y values of the  measurements
+        :param xvalue: List of X values of the  measurements
+        :param label: Optional legend label for data line
+        :param style: Plotting style to use, defaults to black line ('-k')
+        :param annotations: Point annotation strings to be place next
+                            to each point on the line.
+        """
+        style = style or 'k-'
+
+        # Update mai/max values for axis limits
+        self.xscale._values += xvalues
+        if secondary:
+            self.yscale2._values += yvalues
+            self.ax2.semilogx(xvalues, yvalues, style, label=label, linewidth=2)
+        else:
+            self.yscale._values += yvalues
+            self.plot(xvalues, yvalues, style, label=label, linewidth=2)
+
+        # Add point annotations
+        if annotations:
+            for x, y, a in zip(xvalues, yvalues, annotations):
+                plt.annotate(a, xy=(x, y), xytext=(4, 2),
+                             textcoords='offset points', size=6)
+
+
+class BarchartPlotter(Plotter):
+    """Barchart plotter for generating direct comparison plots.
+
+    :params figname: Name of output file
+    :params plotdir: Directory to store the plot in
+    :params title: Plot title to be printed on top
+
+    Example usage:
+
+    with BarchartPlotter(figname=..., plotdir=...) as barchart:
+        barchart.add_point(gflops[0], oi[0], label='Point A')
+        barchart.add_point(gflops[1], oi[1], label='Point B')
+    """
+
+    def __init__(self, figname='barchart', plotdir='plots',
+                 title=None):
+        super(BarchartPlotter, self).__init__(plotdir=plotdir)
+        self.figname = figname
+        self.title = title
+        self.legend = {}
+        self.values = defaultdict(dict)
+
+    def __enter__(self):
+        self.fig, self.ax = self.create_figure(self.figname)
+        if self.title is not None:
+            self.ax.set_title(title)
+        return self
+
+    def __exit__(self, *args):
+        # Set axis labelling and generate plot file
+        # self.ax.set_xticks(x_indices + width)
+        # self.ax.set_xticklabels(self.values.keys())
+        self.set_yaxis(self.ax, 'Runtime (s)')
+        self.ax.legend(self.legend, loc='best', ncol=2,
+                       fancybox=True, fontsize=10)
+        self.save_figure(self.fig, self.figname)
+
+    def add_value(self, value, grouplabel=None, color=None, label=None):
+        """Adds a single point measurement to the barchart plot
+
+        :param value: Y-value of the given point measurement
+        :param grouplabel: Group label to be put on the X-axis
+        :param color: Optional plotting color for data point
+        :param label: Optional legend label for data point
+        """
+        # Record all points keyed by group and legend labels
+        self.values[grouplabel][label] = value
+
+        # Record legend labels to avoid replication
+        if label is not None:
+            self.legend[label] = color
 
 
 class RooflinePlotter(Plotter):

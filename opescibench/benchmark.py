@@ -1,21 +1,14 @@
 from opescibench.plotter import Plotter
-from opescibench.utils import bench_print
+from opescibench.utils import bench_print, mpi_rank as rank
 
 from argparse import ArgumentParser
-from collections import OrderedDict
+from collections import OrderedDict, Iterable
 from itertools import product
 from datetime import datetime
 from os import path, makedirs
 
 import json
 from numpy import array
-
-try:
-    from mpi4py import MPI
-    rank = MPI.COMM_WORLD.rank
-except ImportError:
-    # Assume serial
-    rank = 0
 
 
 __all__ = ['Benchmark']
@@ -90,8 +83,14 @@ class Benchmark(object):
         """ Convert parameter tuple to string """
         return '_'.join(['%s%s' % p for p in params])
 
-    def lookup(self, params={}, event='execute', measure='time', category='timings'):
-        """ Lookup a set of results accoridng to a parameter set. """
+    def lookup(self, params={}, event=None, measure='time', category='timings'):
+        """ Lookup a set of results accoridng to a parameter set.
+
+        :param params: Parameter set by which to filter results
+        :param event: Optional, one or more events for which to retrieve data.
+        :param category: Either 'timings' or 'meta'
+        """
+        assert(category in ['timings', 'meta'])
         result = OrderedDict()
         for params in self.sweep(params):
             key = tuple(params.items())
@@ -99,6 +98,9 @@ class Benchmark(object):
             if key in datadict:
                 if event is None:
                     result[key] = datadict[key][measure]
+                elif isinstance(event, Iterable):
+                    result[key] = [datadict[key][ev][measure]
+                                   for ev in event]
                 else:
                     result[key] = datadict[key][event][measure]
         return result
@@ -110,9 +112,8 @@ class Benchmark(object):
         """
         for params in self.sweep():
             bench_print("", pre=2)
-            bench_print("Running %s, %s, so=%d to=%d, nbpml=%d. Repeats: %d" %
-                        (self.name, str(params['dimensions']), params['space_order'],
-                         params['time_order'], params['nbpml'], repeats))
+            bench_print("Running %d repeats - parameters: %s" % (repeats,
+                        ', '.join(['%s: %s' % (k, v) for k, v in params.items()])))
 
             # Execute the benchmark
             executor.execute(warmups=warmups, repeats=repeats, **params)
