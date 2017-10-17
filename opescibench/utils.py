@@ -21,12 +21,12 @@ def bench_print(msg, pre=0, post=0, timestamp=False):
 
     for i in range(pre):
         if mpi_rank == 0:
-            print ""
+            print ("")
     if msg:
         if mpi_rank == 0:
             now = datetime.now()
             ts = ' [%s]' % now.strftime("%H:%M:%S") if timestamp else ''
-            print color % ("OpesciBench%s: %s" % (ts, msg))
+            print (color % ("OpesciBench%s: %s" % (ts, msg)))
     for i in range(post):
         if mpi_rank == 0:
-            print ""
+            print ("")
