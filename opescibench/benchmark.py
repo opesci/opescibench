@@ -98,7 +98,7 @@ class Benchmark(object):
             if key in datadict:
                 if event is None:
                     result[key] = datadict[key][measure]
-                elif isinstance(event, Iterable):
+                elif isinstance(event, Iterable) and not isinstance(event, str):
                     result[key] = [datadict[key][ev][measure]
                                    for ev in event]
                 else:
