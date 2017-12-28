@@ -343,8 +343,8 @@ class RooflinePlotter(Plotter):
                                 'size': 5, 's': j})
 
         # Set axis labelling and generate plot file
-        xlabel='Operational intensity (Flops/Byte)'
-        ylabel='Performance (GFlops/s)'
+        xlabel = 'Operational intensity (FLOPs/Byte)'
+        ylabel = 'Performance (GFLOPs/s)'
         self.set_xaxis(self.ax, xlabel, values=self.xvals, dtype=np.int32)
         self.set_yaxis(self.ax, ylabel, values=self.yvals, dtype=np.int32)
         if self.legend is not None:
