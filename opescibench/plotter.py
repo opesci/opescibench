@@ -36,7 +36,7 @@ def scale_limits(minval, maxval, base, type='log'):
         basemax = ceil(float(maxval) / base)
     nvals = basemax - basemin + 1
     dtype = np.float32
-    basevals = np.linspace(basemin, basemax, nvals, dtype=dtype)
+    basevals = np.linspace(basemin, basemax, 5, dtype=dtype)
     if type == 'log':
         return dtype(base) ** basevals
     else:
@@ -86,23 +86,23 @@ class Plotter(object):
 
     def create_figure(self, figname):
         fig = plt.figure(figname, figsize=self.figsize, dpi=self.dpi)
-        ax = fig.add_subplot(111)
+        ax = fig.subplots()
         return fig, ax
 
     def set_xaxis(self, axis, label, values=None, dtype=np.float32):
         if values is not None:
             values = np.array(values).astype(dtype)
             axis.set_xlim(values[0], values[-1])
-            axis.set_xticks(values)
-            axis.set_xticklabels(values, fontsize=self.fonts['axis'])
+            # axis.set_xticks(values)
+            # axis.set_xticklabels(values, fontsize=self.fonts['axis'])
         axis.set_xlabel(label, fontsize=self.fonts['axis'])
 
     def set_yaxis(self, axis, label, values=None, dtype=np.float32):
         if values is not None:
             values = np.array(values).astype(dtype)
             axis.set_ylim(values[0], values[-1])
-            axis.set_yticks(values)
-            axis.set_yticklabels(values, fontsize=self.fonts['axis'])
+            # axis.set_yticks(values)
+            # axis.set_yticklabels(values, fontsize=self.fonts['axis'])
         axis.set_ylabel(label, fontsize=self.fonts['axis'])
 
     def save_figure(self, figure, figname):
