@@ -267,37 +267,45 @@ class RooflinePlotter(Plotter):
     :params title: Plot title to be printed on top
     :params max_bw: Maximum achievable memory bandwidth in GB/s.
                     This defines the slope of the roofline.
-    :params max_flops: Maximum achievable performance in GFlops/s.
-                       This defines the roof of the roofline.
+    :params flop_ceils: An iterable of 2-tuple (float, str); the float
+                        represents the maximum achievable performance
+                        in GFlops/s; the str indicates how the performance
+                        ceil was obtained (e.g., ideal peak, linpack)
     :params with_yminorticks: Show minor ticks on yaxis.
     :params fancycolors: Use beautiful colors, using the user-provided
                          colors as key to establish a 1-to-1 mapping
                          between user-provided colors and the new ones.
     :params legend: Additional arguments for legend entries, default:
-                    {loc='best', ncol=2, fancybox=True, fontsize=10}
+                    {loc='best', ncol=2, fancybox=True, fontsize=10}.
+                    Pass the string ``'drop'`` to show no legend.
 
     Example usage:
 
     with RooflinePlotter(figname=..., plotdir=...,
-                         max_bw=..., max_flops=...) as roofline:
+                         max_bw=..., flop_ceils=...) as roofline:
         roofline.add_point(gflops[0], oi[0], label='Point A')
         roofline.add_point(gflops[1], oi[1], label='Point B')
     """
 
     def __init__(self, figname='roofline', plotdir='plots', title=None,
-                 max_bw=None, max_flops=None, with_yminorticks=False,
+                 max_bw=None, flop_ceils=None, with_yminorticks=False,
                  fancycolor=False, legend=None):
         super(RooflinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
         self.title = title
-        self.legend = {'loc': 'best', 'ncol': 2, 'fancybox': True, 'fontsize': 10}
-        self.legend.update(legend)  # Add user arguments to defaults
+        if legend != 'drop':
+            self.legend = {'loc': 'best', 'ncol': 2, 'fancybox': True, 'fontsize': 10}
+            self.legend.update(legend)  # Add user arguments to defaults
+        else:
+            self.legend = None
         self.legend_map = {}  # Label -> style map for legend entries
 
         self.max_bw = max_bw
-        self.max_flops = max_flops
-        self.xvals = [float(max_flops) / max_bw]
-        self.yvals = [max_flops]
+        self.flop_ceils = OrderedDict(sorted(flop_ceils, key=lambda i: i[0]))
+        self.max_flops = max(self.flop_ceils)
+
+        self.xvals = [float(self.max_flops) / max_bw]
+        self.yvals = [self.max_flops]
         self.with_yminorticks = with_yminorticks
         if fancycolor is True:
             self.fancycolor = ColorTracker({}, list(self.color))
@@ -315,26 +323,32 @@ class RooflinePlotter(Plotter):
 
     def __exit__(self, *args):
         # Scale axis limits
-        self.xvals = scale_limits(min(self.xvals), max(self.xvals), base=2., type='log')
-        self.yvals = scale_limits(min(self.yvals), max(self.yvals), base=2., type='log')
+        self.xvals = scale_limits(min(1.0, *self.xvals), max(64, *self.xvals), base=2., type='log')
+        self.yvals = scale_limits(min(16.0, *self.yvals), max(self.yvals), base=2., type='log')
+
         # Add a dotted lines for stored OI values
         for oi in self.oi_lines:
             self.ax.plot([oi, oi], [1., min(oi * self.max_bw, self.max_flops)], 'k:')
 
-        # Add the roofline
-        roofline = self.xvals * self.max_bw
-        roofline[roofline > self.max_flops] = self.max_flops
-        idx = (roofline >= self.max_flops).argmax()
-        x_roofl = np.insert(self.xvals, idx, self.max_flops / self.max_bw)
-        roofline = np.insert(roofline, idx, self.max_flops)
-        self.ax.loglog(x_roofl, roofline, 'k-')
+        # Add the rooflines
+        for i, j in self.flop_ceils.items():
+            y_roofl = self.xvals * self.max_bw
+            y_roofl[y_roofl > i] = i
+            idx = (y_roofl >= i).argmax()
+            x_roofl = np.insert(self.xvals, idx, i / self.max_bw)
+            y_roofl = np.insert(y_roofl, idx, i)
+            self.ax.loglog(x_roofl, y_roofl, 'k-')
+            self.ax.annotate(**{'xy': (x_roofl[-1] - len(j), y_roofl[idx+1]),
+                                'xytext': (-20, 2), 'textcoords': 'offset points',
+                                'size': 5, 's': j})
 
         # Set axis labelling and generate plot file
-        xlabel='Operational intensity (Flops/Byte)'
-        ylabel='Performance (GFlops/s)'
+        xlabel = 'Operational intensity (FLOPs/Byte)'
+        ylabel = 'Performance (GFLOPs/s)'
         self.set_xaxis(self.ax, xlabel, values=self.xvals, dtype=np.int32)
         self.set_yaxis(self.ax, ylabel, values=self.yvals, dtype=np.int32)
-        self.ax.legend(**self.legend)
+        if self.legend is not None:
+            self.ax.legend(**self.legend)
         self.save_figure(self.fig, self.figname)
 
     def set_yaxis(self, axis, label, values=None, dtype=np.float32):
