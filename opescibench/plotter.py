@@ -339,8 +339,8 @@ class RooflinePlotter(Plotter):
             y_roofl = np.insert(y_roofl, idx, i)
             self.ax.loglog(x_roofl, y_roofl, 'k-')
             self.ax.annotate(**{'xy': (x_roofl[-1] - len(j), y_roofl[idx+1]),
-                                'xytext': (-20, 2), 'textcoords': 'offset points',
-                                'size': 5, 's': j})
+                                'xytext': (-24, 2), 'textcoords': 'offset points',
+                                'size': 7, 's': j})
 
         # Set axis labelling and generate plot file
         xlabel = 'Operational intensity (FLOPs/Byte)'
