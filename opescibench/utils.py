@@ -1,12 +1,14 @@
 import sys
 from datetime import datetime
 
-try:
-    from mpi4py import MPI
-    mpi_rank = MPI.COMM_WORLD.rank
-except ImportError:
-    # Assume serial
-    mpi_rank = 0
+# try:
+#     from mpi4py import MPI
+#     mpi_rank = MPI.COMM_WORLD.rank
+# except ImportError:
+# Assume serial
+
+mpi_rank = 0
+print("----------------------------")
 
 
 __all__ = ['bench_print', 'mpi_rank']
