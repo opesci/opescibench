@@ -3,11 +3,15 @@ from opescibench.utils import bench_print, mpi_rank as rank
 
 from argparse import ArgumentParser
 from collections import OrderedDict, Iterable
+from devito import configuration
+from devito.mpi import MPI
+
 from itertools import product
 from datetime import datetime
 from os import path, makedirs
 
 import json
+import mpi4py
 from numpy import array
 
 
@@ -138,9 +142,21 @@ class Benchmark(object):
             datadict['meta'] = self.meta[key]
             datadict['timings'] = self.timings[key]
 
-            filename = '%s_%s.json' % (self.name, self.param_string(key))
+            if configuration['openmp']==1:
+                cores_physical = configuration['platform'].cores_physical
+            else:
+                cores_physical = 0
+
+            if configuration['mpi'] != 0:
+                mpiprocs = MPI.COMM_WORLD.rank
+            else:
+                mpiprocs = 0
+
+            filename = '%s_%s_mpi[%d]_nt[%d].json' % (self.name, self.param_string(key), mpiprocs, cores_physical)
             with open(path.join(self.resultsdir, filename), 'w') as f:
                 json.dump(datadict, f, indent=4)
+
+
 
     def load(self):
         """ Load timing results from individually keyed files. """
