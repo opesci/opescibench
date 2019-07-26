@@ -1,23 +1,22 @@
 import sys
 from datetime import datetime
 
-try:
-    from mpi4py import MPI
-    mpi_rank = MPI.COMM_WORLD.rank
-except ImportError:
-    # Assume serial
-    mpi_rank = 0
+
+__all__ = ['bench_print']
 
 
-__all__ = ['bench_print', 'mpi_rank']
-
-
-def bench_print(msg, pre=0, post=0, timestamp=False):
+def bench_print(msg, pre=0, post=0, timestamp=False, comm=None):
     if sys.stdout.isatty() and sys.stderr.isatty():
         # Blue
         color = '\033[1;37;34m%s\033[0m'
     else:
         color = '%s'
+
+    if comm is not None:
+        mpi_rank = comm.rank
+    else:
+        # Emit on all ranks, or perhaps we're not even running over MPI
+        mpi_rank = 0
 
     for i in range(pre):
         if mpi_rank == 0:

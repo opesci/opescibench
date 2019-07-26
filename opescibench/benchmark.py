@@ -1,5 +1,5 @@
 from opescibench.plotter import Plotter
-from opescibench.utils import bench_print, mpi_rank as rank
+from opescibench.utils import bench_print
 
 from argparse import ArgumentParser
 from collections import OrderedDict, Iterable
@@ -111,10 +111,6 @@ class Benchmark(object):
         for each combination of the parameter sweep.
         """
         for params in self.sweep():
-            bench_print("", pre=2)
-            bench_print("Running %d repeats - parameters: %s" % (repeats,
-                        ', '.join(['%s: %s' % (k, v) for k, v in params.items()])))
-
             # Execute the benchmark
             executor.execute(warmups=warmups, repeats=repeats, **params)
 
@@ -122,12 +118,8 @@ class Benchmark(object):
             self.timings[tuple(params.items())] = executor.timings
             self.meta[tuple(params.items())] = executor.meta
 
-            bench_print("", post=2)
-
     def save(self):
         """ Save all timing results in individually keyed files. """
-        if rank > 0:
-            return
         if not path.exists(self.resultsdir):
             makedirs(self.resultsdir)
         timestamp = datetime.now().strftime('%Y-%m-%dT%H%M%S')
