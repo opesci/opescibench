@@ -50,27 +50,27 @@ class Executor(object):
         Execute a single benchmark repeatedly, including
         setup, teardown and postprocessing methods.
         """
-        bench_print("", pre=2)
         bench_print("Running %d repeats - parameters: %s" % (repeats,
-                    ', '.join(['%s: %s' % (k, v) for k, v in params.items()])))
+                    ', '.join(['%s: %s' % (k, v) for k, v in params.items()])),
+                    comm=self.comm)
 
         self.reset()
         for i in range(warmups):
-            bench_print("--- Warmup %d ---" % i, timestamp=True)
+            bench_print("--- Warmup %d ---" % i, timestamp=True, comm=self.comm)
             self.setup(**params)
             self.run(**params)
             self.teardown(**params)
-            bench_print("--- Warmup %d finished ---" % i, post=1, timestamp=True)
+            bench_print("--- Warmup %d finished ---" % i, post=1, timestamp=True, comm=self.comm)
 
         self.reset()
         for i in range(repeats):
-            bench_print("--- Run %d ---" % i, timestamp=True)
+            bench_print("--- Run %d ---" % i, timestamp=True, comm=self.comm)
             self.setup(**params)
             self.run(**params)
             self.teardown(**params)
-            bench_print("--- Run %d finished ---" % i, post=1, timestamp=True)
+            bench_print("--- Run %d finished ---" % i, post=1, timestamp=True, comm=self.comm)
 
-        bench_print("", post=2)
+        bench_print("", post=2, comm=self.comm)
 
         # Average timings across repeats
         for event in self.timings.keys():
