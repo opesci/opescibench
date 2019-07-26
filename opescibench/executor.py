@@ -6,7 +6,13 @@ __all__ = ['Executor']
 
 
 class Executor(object):
-    """ Abstract container class for a single benchmark data point. """
+    """ Abstract container class for a single benchmark data point.
+
+    :param comm: The MPI communicator over which the benchmark is run.
+    """
+
+    def __init__(self, comm=None):
+        self.comm = comm
 
     def setup(self, **kwargs):
         """ Prepares a single benchmark invocation. """
@@ -44,6 +50,9 @@ class Executor(object):
         Execute a single benchmark repeatedly, including
         setup, teardown and postprocessing methods.
         """
+        bench_print("", pre=2)
+        bench_print("Running %d repeats - parameters: %s" % (repeats,
+                    ', '.join(['%s: %s' % (k, v) for k, v in params.items()])))
 
         self.reset()
         for i in range(warmups):
@@ -60,6 +69,8 @@ class Executor(object):
             self.run(**params)
             self.teardown(**params)
             bench_print("--- Run %d finished ---" % i, post=1, timestamp=True)
+
+        bench_print("", post=2)
 
         # Average timings across repeats
         for event in self.timings.keys():
