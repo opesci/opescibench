@@ -90,19 +90,19 @@ class Plotter(object):
         return fig, ax
 
     def set_xaxis(self, axis, label, values=None, dtype=np.float32):
-        if values is not None:
-            values = np.array(values).astype(dtype)
-            axis.set_xlim(values[0], values[-1])
-            axis.set_xticks(values)
-            axis.set_xticklabels(values, fontsize=self.fonts['axis'])
+        #if values is not None:
+            #values = np.array(values).astype(dtype)
+            #axis.set_xlim(values[0], values[-1])
+            #axis.set_xticks(values)
+            #axis.set_xticklabels(values, fontsize=self.fonts['axis'])
         axis.set_xlabel(label, fontsize=self.fonts['axis'])
 
     def set_yaxis(self, axis, label, values=None, dtype=np.float32):
-        if values is not None:
-            values = np.array(values).astype(dtype)
-            axis.set_ylim(values[0], values[-1])
-            axis.set_yticks(values)
-            axis.set_yticklabels(values, fontsize=self.fonts['axis'])
+        #if values is not None:
+            #values = np.array(values).astype(dtype)
+            #axis.set_ylim(values[0], values[-1])
+            #axis.set_yticks(values)
+            #axis.set_yticklabels(values, fontsize=self.fonts['axis'])
         axis.set_ylabel(label, fontsize=self.fonts['axis'])
 
     def save_figure(self, figure, figname):
@@ -110,8 +110,12 @@ class Plotter(object):
             makedirs(self.plotdir)
         figpath = path.join(self.plotdir, figname)
         bench_print("Plotting %s " % figpath)
-        figure.savefig(figpath, format='pdf', facecolor='white',
-                       orientation='landscape', bbox_inches='tight')
+        ff = 'ps'
+        figure.savefig(figpath+'.'+ff, format=ff, facecolor='white',
+                       orientation='portrait', bbox_inches='tight')
+        #from IPython import embed; embed()
+        #figure.savefig('test.ps', format='ps', facecolor='white',
+                       #orientation='landscape', bbox_inches='tight')
 
 
 class LinePlotter(Plotter):
@@ -128,7 +132,8 @@ class LinePlotter(Plotter):
     """
 
     def __init__(self, figname='plot', plotdir='plots', title=None,
-                 plot_type='loglog', xscale=None, yscale=None,
+                 #plot_type='loglog', xscale=None, yscale=None,
+                 plot_type='plot', xscale=None, yscale=None,
                  xlabel=None, ylabel=None, legend=None,
                  yscale2=None, ylabel2=None):
         super(LinePlotter, self).__init__(plotdir=plotdir)
@@ -140,14 +145,18 @@ class LinePlotter(Plotter):
         self.plot_type = plot_type
         self.xlabel = xlabel or 'Number of processors'
         self.ylabel = ylabel or 'Wall time (s)'
-        self.xscale = xscale or AxisScale(scale='log', base=2.)
-        self.yscale = yscale or AxisScale(scale='log', base=2.)
+        #self.xscale = xscale or AxisScale(scale='log', base=2.)
+        #self.yscale = yscale or AxisScale(scale='log', base=2.)
+        self.xscale = xscale or AxisScale(scale='linear')
+        self.yscale = yscale or AxisScale(scale='linear')
         self.yscale2 = yscale2
         self.ylabel2 = ylabel2
 
     def __enter__(self):
         self.fig, self.ax = self.create_figure(self.figname)
+        #from IPython import embed; embed()
         self.plot = getattr(self.ax, self.plot_type)
+        #self.plot = getattr(self.ax)
         if self.title is not None:
             self.ax.set_title(title)
 
@@ -175,6 +184,7 @@ class LinePlotter(Plotter):
         if len(lines) > 0:
             self.ax.legend(lines, labels, **self.legend)
 
+        #from IPython import embed; embed()
         self.save_figure(self.fig, self.figname)
 
     def add_line(self, xvalues, yvalues, label=None, style=None,
@@ -188,22 +198,24 @@ class LinePlotter(Plotter):
         :param annotations: Point annotation strings to be place next
                             to each point on the line.
         """
-        style = style or 'k-'
+        style = style or 'b-'
 
         # Update mai/max values for axis limits
         self.xscale._values += xvalues
         if secondary:
             self.yscale2._values += yvalues
-            self.ax2.semilogx(xvalues, yvalues, style, label=label, linewidth=2)
+            self.ax2.semilogx(xvalues, yvalues, style, label=label, linewidth=1)
         else:
             self.yscale._values += yvalues
-            self.plot(xvalues, yvalues, style, label=label, linewidth=2)
+            self.plot(xvalues, yvalues, style, label=label, linewidth=1)
 
+        #from IPython import embed; embed()
         # Add point annotations
         if annotations:
             for x, y, a in zip(xvalues, yvalues, annotations):
                 plt.annotate(a, xy=(x, y), xytext=(4, 2),
                              textcoords='offset points', size=6)
+        self.plt = plt
 
 
 class BarchartPlotter(Plotter):
