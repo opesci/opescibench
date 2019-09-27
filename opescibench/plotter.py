@@ -113,9 +113,6 @@ class Plotter(object):
         ff = 'ps'
         figure.savefig(figpath+'.'+ff, format=ff, facecolor='white',
                        orientation='portrait', bbox_inches='tight')
-        #from IPython import embed; embed()
-        #figure.savefig('test.ps', format='ps', facecolor='white',
-                       #orientation='landscape', bbox_inches='tight')
 
 
 class LinePlotter(Plotter):
@@ -132,10 +129,9 @@ class LinePlotter(Plotter):
     """
 
     def __init__(self, figname='plot', plotdir='plots', title=None,
-                 #plot_type='loglog', xscale=None, yscale=None,
                  plot_type='plot', xscale=None, yscale=None,
-                 xlabel=None, ylabel=None, legend=None,
-                 yscale2=None, ylabel2=None):
+                 xlabel=None, ylabel='gflopss', legend=None,
+                 yscale2=None, ylabel2=None, normalised=False):
         super(LinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
         self.title = title
@@ -144,22 +140,21 @@ class LinePlotter(Plotter):
         self.legend.update(legend or {})  # Add user arguments to defaults
         self.plot_type = plot_type
         self.xlabel = xlabel or 'Number of processors'
-        self.ylabel = ylabel or 'Wall time (s)'
-        #self.xscale = xscale or AxisScale(scale='log', base=2.)
-        #self.yscale = yscale or AxisScale(scale='log', base=2.)
+        if normalised:
+            self.ylabel = ylabel+'/'+ylabel+'[0]'
+        else:
+            self.ylabel = ylabel
         self.xscale = xscale or AxisScale(scale='linear')
         self.yscale = yscale or AxisScale(scale='linear')
         self.yscale2 = yscale2
         self.ylabel2 = ylabel2
+        self.normalised = normalised
 
     def __enter__(self):
         self.fig, self.ax = self.create_figure(self.figname)
-        #from IPython import embed; embed()
         self.plot = getattr(self.ax, self.plot_type)
-        #self.plot = getattr(self.ax)
         if self.title is not None:
             self.ax.set_title(title)
-
         if self.yscale2:
             self.ax2 = self.ax.twinx()
         return self
@@ -184,11 +179,10 @@ class LinePlotter(Plotter):
         if len(lines) > 0:
             self.ax.legend(lines, labels, **self.legend)
 
-        #from IPython import embed; embed()
         self.save_figure(self.fig, self.figname)
 
-    def add_line(self, xvalues, yvalues, label=None, style=None,
-                 annotations=None, secondary=False):
+    def add_line(self, xvalues, yvalues, normalised=False, label=None, style=None,
+                 yvar='gflopss', annotations=None, secondary=False):
         """Adds a single line to the plot of from a set of measurements
 
         :param yvalue: List of Y values of the  measurements
@@ -200,6 +194,10 @@ class LinePlotter(Plotter):
         """
         style = style or 'b-'
 
+        if self.normalised:
+            xvalues = [x/xvalues[0] for x in xvalues]
+            yvalues = [y/yvalues[0] for y in yvalues]
+
         # Update mai/max values for axis limits
         self.xscale._values += xvalues
         if secondary:
@@ -209,7 +207,6 @@ class LinePlotter(Plotter):
             self.yscale._values += yvalues
             self.plot(xvalues, yvalues, style, label=label, linewidth=1)
 
-        #from IPython import embed; embed()
         # Add point annotations
         if annotations:
             for x, y, a in zip(xvalues, yvalues, annotations):
