@@ -110,7 +110,7 @@ class Plotter(object):
             makedirs(self.plotdir)
         figpath = path.join(self.plotdir, figname)
         bench_print("Plotting %s " % figpath)
-        ff = 'ps'
+        ff = 'png'
         figure.savefig(figpath+'.'+ff, format=ff, facecolor='white',
                        orientation='portrait', bbox_inches='tight')
 
@@ -130,7 +130,7 @@ class LinePlotter(Plotter):
 
     def __init__(self, figname='plot', plotdir='plots', title=None,
                  plot_type='plot', xscale=None, yscale=None,
-                 xlabel=None, ylabel='gflopss', legend=None,
+                 xlabel=None, ylabel='Runtime (s)', legend=None,
                  yscale2=None, ylabel2=None, normalised=False):
         super(LinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
@@ -139,13 +139,15 @@ class LinePlotter(Plotter):
                        'fancybox': True, 'fontsize': 10}
         self.legend.update(legend or {})  # Add user arguments to defaults
         self.plot_type = plot_type
-        self.xlabel = xlabel or 'Number of processors'
+        self.xlabel = xlabel or 'Number of Nodes [MPI processes]'
         if normalised:
-            self.ylabel = ylabel+'/'+ylabel+'[0]'
+            self.ylabel = 'Runtime (Normalised units)'
         else:
             self.ylabel = ylabel
-        self.xscale = xscale or AxisScale(scale='linear')
-        self.yscale = yscale or AxisScale(scale='linear')
+        #self.xscale = xscale or AxisScale(scale='linear')
+        #self.yscale = yscale or AxisScale(scale='linear')
+        self.xscale = xscale or AxisScale(scale='log2')
+        self.yscale = yscale or AxisScale(scale='log2')
         self.yscale2 = yscale2
         self.ylabel2 = ylabel2
         self.normalised = normalised
@@ -165,6 +167,17 @@ class LinePlotter(Plotter):
                        dtype=self.xscale.dtype)
         self.set_yaxis(self.ax, self.ylabel, values=self.yscale.values,
                        dtype=self.yscale.dtype)
+        self.ax.set_xscale('symlog', basex=2)
+        self.ax.set_yscale('symlog', basex=2)
+        if self.normalised:
+            self.plt.xticks([2, 4, 8, 16, 32],
+               ["1 [2]", "2 [4]", "4 [8]", "8 [16]", "16 [32]"])
+            self.plt.yticks([2, 4, 8, 16, 32],
+               ["1", "2", "4", "8", "16"])
+        else:
+            self.plt.xticks([2, 4, 8, 16, 32],
+               ["1 [2]", "2 [4]", "4 [8]", "8 [16]", "16 [32]"])
+        self.plt.grid(color='gray', linestyle='--', linewidth=0.2)
         if self.yscale2:
             self.set_yaxis(self.ax2, self.ylabel2,
                            values=self.yscale2.values,
@@ -182,7 +195,7 @@ class LinePlotter(Plotter):
         self.save_figure(self.fig, self.figname)
 
     def add_line(self, xvalues, yvalues, normalised=False, label=None, style=None,
-                 yvar='gflopss', annotations=None, secondary=False):
+                 annotations=None, secondary=False):
         """Adds a single line to the plot of from a set of measurements
 
         :param yvalue: List of Y values of the  measurements
@@ -195,8 +208,9 @@ class LinePlotter(Plotter):
         style = style or 'b-'
 
         if self.normalised:
-            xvalues = [x/xvalues[0] for x in xvalues]
-            yvalues = [y/yvalues[0] for y in yvalues]
+            #xvalues = [x/xvalues[0] for x in xvalues]
+            xvalues = [x for x in xvalues]
+            yvalues = [2*y/yvalues[0] for y in yvalues]
 
         # Update mai/max values for axis limits
         self.xscale._values += xvalues
@@ -245,9 +259,14 @@ class BarchartPlotter(Plotter):
 
     def __exit__(self, *args):
         # Set axis labelling and generate plot file
-        # self.ax.set_xticks(x_indices + width)
+        #self.ax.set_xticks([2, 4, 8, 16, 32])
+        self.xticks([2, 4, 8, 16, 32],
+           ["2", "4", "8", "16", "32"])
         # self.ax.set_xticklabels(self.values.keys())
-        self.set_yaxis(self.ax, 'Runtime (s)')
+        if self.normalised:
+            self.set_yaxis(self.ax, 'Runtime (Normalised units)')
+        else:
+            self.set_yaxis(self.ax, 'Runtime (s)')
         self.ax.legend(self.legend, loc='best', ncol=2,
                        fancybox=True, fontsize=10)
         self.save_figure(self.fig, self.figname)
