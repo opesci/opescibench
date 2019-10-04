@@ -139,9 +139,9 @@ class LinePlotter(Plotter):
                        'fancybox': True, 'fontsize': 10}
         self.legend.update(legend or {})  # Add user arguments to defaults
         self.plot_type = plot_type
-        self.xlabel = xlabel or 'Number of Nodes [MPI processes]'
+        self.xlabel = xlabel or 'Number of cores'
         if normalised:
-            self.ylabel = 'Runtime (Normalised units)'
+            self.ylabel = 'Speed-up'
         else:
             self.ylabel = ylabel
         #self.xscale = xscale or AxisScale(scale='linear')
@@ -171,12 +171,16 @@ class LinePlotter(Plotter):
         self.ax.set_yscale('symlog', basex=2)
         if self.normalised:
             self.plt.xticks([2, 4, 8, 16, 32],
-               ["1 [2]", "2 [4]", "4 [8]", "8 [16]", "16 [32]"])
+               ["24", "48", "96", "192", "384"])
+               #["1 [2]", "2 [4]", "4 [8]", "8 [16]", "16 [32]"])
             self.plt.yticks([2, 4, 8, 16, 32],
                ["1", "2", "4", "8", "16"])
         else:
             self.plt.xticks([2, 4, 8, 16, 32],
-               ["1 [2]", "2 [4]", "4 [8]", "8 [16]", "16 [32]"])
+               ["24", "48", "96", "192", "384"])
+               #["1 [2]", "2 [4]", "4 [8]", "8 [16]", "16 [32]"])
+            self.plt.yticks([64, 32, 16, 8, 4],
+                            ["64", "32", "16", "8", "4"])
         self.plt.grid(color='gray', linestyle='--', linewidth=0.2)
         if self.yscale2:
             self.set_yaxis(self.ax2, self.ylabel2,
@@ -208,9 +212,10 @@ class LinePlotter(Plotter):
         style = style or 'b-'
 
         if self.normalised:
-            #xvalues = [x/xvalues[0] for x in xvalues]
-            xvalues = [x for x in xvalues]
-            yvalues = [2*y/yvalues[0] for y in yvalues]
+            nval = yvalues[0]
+            yvalues = [2*nval/y for y in yvalues]
+        #else:
+            #yvalues = [y/(2*x) for x, y in zip(xvalues, yvalues)]
 
         # Update mai/max values for axis limits
         self.xscale._values += xvalues
