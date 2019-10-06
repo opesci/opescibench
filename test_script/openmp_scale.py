@@ -37,7 +37,7 @@ def extract_xy(files, path, var='gflopss', _ordered=True):
     return xvals, yvals
 
 
-figname = 'gflopss_omp'
+figname = 'speedup_omp'
 
 atimings = ([337.4, 178.43, 106.78, 52.13, 37.71])
 vtimings = ([907.01, 689.14, 360.12, 183.70, 124.11])
