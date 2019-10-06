@@ -40,10 +40,10 @@ def extract_xy(files, path, var='gflopss', _ordered=True):
 figname = 'gflopss_omp'
 
 atimings = ([337.4, 178.43, 106.78, 52.13, 37.71])
-vtimings = ([7803.47, 3813.38, 1685.39, 1006.96, 688.86])
+vtimings = ([907.01, 689.14, 360.12, 183.70, 124.11])
 
 agflopss = ([13.27, 25.08, 42.15, 85.84, 118.67])
-vgflopss = ([0.47, 0.95, 2.15, 3.59, 5.25])
+vgflopss = ([3.99, 5.25, 10.04, 19.67, 29.11])
 
 omp_threads = ([1.0, 2.0, 4.0, 8.0, 12.0])
 idealGF = np.asarray(omp_threads)/vgflopss[0]
