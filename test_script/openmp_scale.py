@@ -60,8 +60,11 @@ with LinePlotter(figname=figname, normalised=True) as plot:
     plot.ylabel = 'Speedup'
     plot.ax.grid()
     plot.ax.set_xscale('log', basex=2)
-
     plot.ax.set_yscale('log', basey=2)
+
+    plot.ax.set_xticks(omp_threads)
+    plot.ax.set_xticklabels(omp_threads)
+
     plot.ax.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.f'))
     plot.ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.f'))
 
@@ -75,8 +78,15 @@ with LinePlotter(figname=figname, normalised=False) as plot:
     #plot.add_line(x3, y3, label='TTI', style='g-')
     #plot.ax.set_title('OpenMP execution time scaling')
     plot.ax.grid()
+
+
+
     plot.ax.set_xscale('log', basex=2)
     plot.ax.set_yscale('log', basey=2)
+
+
+    plot.ax.set_xticks(omp_threads)
+    plot.ax.set_xticklabels(omp_threads)
     plot.ax.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.f'))
     plot.ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.f'))
 

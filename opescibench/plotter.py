@@ -110,7 +110,7 @@ class Plotter(object):
             makedirs(self.plotdir)
         figpath = path.join(self.plotdir, figname)
         bench_print("Plotting %s " % figpath)
-        ff = 'ps'
+        ff = 'pdf'
         figure.savefig(figpath+'.'+ff, format=ff, facecolor='white',
                        orientation='portrait', bbox_inches='tight')
 
