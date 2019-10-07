@@ -28,7 +28,7 @@ def extract_xy(files, path, var='gflopss', _ordered=True):
         xvals.append(int(re.findall(r'\d+', f)[-2]))
         with open(path+f, 'r') as f:
             res_dict = js.load(f)
-        yvals.append(res_dict['timings']['section0'][var])
+        yvals.append(res_dict['gflopss']['section0'][var])
     if _ordered:
         xvals, yvals = (list(i) for i in zip(*sorted(zip(xvals, yvals))))
     return xvals, yvals
@@ -37,22 +37,22 @@ def extract_xy(files, path, var='gflopss', _ordered=True):
 # Rank of interest
 rank = 'rank[0]'
 
-path = '/data/cx2_data/benchmarks/elastic/results/'
+path = '/home/gb4018/opesci/devito/benchmarks/user/results/elastic/'
 files = scan_dir(path)
 files = [i for i in files if rank in i]
 x0, y0 = extract_xy(files, path)
 
-path = '/data/cx2_data/benchmarks/viscoelastic/results/'
+path = '/home/gb4018/opesci/devito/benchmarks/user/results/acoustic/'
 files = scan_dir(path)
 files = [i for i in files if rank in i]
 x1, y1 = extract_xy(files, path)
 
-path = '/data/cx2_data/benchmarks/acoustic/results/'
+path = '/home/gb4018/opesci/devito/benchmarks/user/results/viscoelastic/'
 files = scan_dir(path)
 files = [i for i in files if rank in i]
 x2, y2 = extract_xy(files, path)
 
-path = '/data/cx2_data/benchmarks/tti/results/'
+path = '/home/gb4018/opesci/devito/benchmarks/user/results/tti/'
 files = scan_dir(path)
 files = [i for i in files if rank in i]
 x3, y3 = extract_xy(files, path)
@@ -61,7 +61,7 @@ x3, y3 = extract_xy(files, path)
 figname = 'test'
 
 with LinePlotter(figname=figname, normalised=True) as plot:
-        plot.add_line(x0, y0, label='Elastic')
-        plot.add_line(x1, y1, label='Acoustic', style='r-')
-        plot.add_line(x2, y2, label='ViscoElastic', style='m-')
-        plot.add_line(x3, y3, label='TTI', style='g-')
+        #plot.add_line(x0, y0, label='Elastic')
+        plot.add_line(x1, y1, label='Acoustic', style='r-o')
+        plot.add_line(x2, y2, label='ViscoElastic', style='m-o')
+        #plot.add_line(x3, y3, label='TTI', style='g-')

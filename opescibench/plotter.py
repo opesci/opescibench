@@ -135,17 +135,21 @@ class LinePlotter(Plotter):
         super(LinePlotter, self).__init__(plotdir=plotdir)
         self.figname = figname
         self.title = title
+        print(self.title)
         self.legend = {'loc': 'best', 'ncol': 2,
                        'fancybox': True, 'fontsize': 10}
         self.legend.update(legend or {})  # Add user arguments to defaults
         self.plot_type = plot_type
         self.xlabel = xlabel or 'Number of processors'
+
         if normalised:
             self.ylabel = ylabel+'/'+ylabel+'[0]'
         else:
             self.ylabel = ylabel
-        self.xscale = xscale or AxisScale(scale='linear')
-        self.yscale = yscale or AxisScale(scale='linear')
+
+        self.xscale = xscale or AxisScale(scale='log')
+        print(self.xscale)
+        self.yscale = yscale or AxisScale(scale='log')
         self.yscale2 = yscale2
         self.ylabel2 = ylabel2
         self.normalised = normalised
@@ -153,10 +157,17 @@ class LinePlotter(Plotter):
     def __enter__(self):
         self.fig, self.ax = self.create_figure(self.figname)
         self.plot = getattr(self.ax, self.plot_type)
+        self.ax.set_xscale('log', basex=2)
+        self.ax.set_yscale('log', basey=2)
+        self.ax.yaxis.set_major_formatter(FormatStrFormatter('%.f'))
+        self.ax.xaxis.set_major_formatter(FormatStrFormatter('%.f'))
+        self.ax.grid(True)
+
         if self.title is not None:
-            self.ax.set_title(title)
+            self.ax.set_title(self.title, {'fontsize': self.fonts['title']})
         if self.yscale2:
             self.ax2 = self.ax.twinx()
+
         return self
 
     def __exit__(self, *args):
