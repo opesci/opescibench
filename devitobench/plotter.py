@@ -19,7 +19,7 @@ try:
     import brewer2mpl as b2m
 except ImportError:
     b2m = None
-from opescibench.utils import bench_print
+from devitobench.utils import bench_print
 
 
 __all__ = ['Plotter', 'LinePlotter', 'RooflinePlotter', 'BarchartPlotter',

@@ -1,6 +1,6 @@
-from opescibench.benchmark import *
-from opescibench.executor import *
-from opescibench.plotter import *
+from devitobench.benchmark import *
+from devitobench.executor import *
+from devitobench.plotter import *
 
 from pkg_resources import get_distribution, DistributionNotFound
 try:

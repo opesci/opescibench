@@ -1,4 +1,4 @@
-from opescibench.utils import bench_print
+from devitobench.utils import bench_print
 
 from collections import defaultdict
 
