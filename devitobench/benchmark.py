@@ -1,5 +1,5 @@
-from opescibench.plotter import Plotter
-from opescibench.utils import bench_print
+from devitobench.plotter import Plotter
+from devitobench.utils import bench_print
 
 from argparse import ArgumentParser
 from collections import OrderedDict, Iterable
