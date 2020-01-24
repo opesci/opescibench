@@ -15,4 +15,4 @@ setup(name='devitobench',
       author_email='g.gorman@imperial.ac.uk',
       license='MIT',
       packages=['devitobench'],
-      install_requires=['numpy', 'simplejson'])
+      install_requires=['numpy', 'simplejson', 'matplotlib'])
